@@ -1,0 +1,18 @@
+# microservices_python/requirements.txt
+
+# FastAPI web framework and server
+fastapi
+uvicorn[standard]
+
+# Settings management
+pydantic-settings
+
+# Gemini AI Client
+google-generativeai
+
+# For PDF processing
+pdfplumber
+
+# For file uploads and forms
+python-multipart
+aiofiles

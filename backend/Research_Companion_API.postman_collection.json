@@ -1,0 +1,722 @@
+{
+	"info": {
+		"_postman_id": "research-companion-api",
+		"name": "Research Companion API",
+		"description": "Complete API collection for testing the Research Companion backend service. Includes authentication, paper management, search, and analytics endpoints.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Check if the API is running and healthy"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"institution\": \"Stanford University\",\n  \"researchInterests\": [\"Machine Learning\", \"Computer Vision\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user account"
+					},
+					"response": []
+				},
+				{
+					"name": "Login User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login with email and password. Save the token from response."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Get current user profile (requires authentication)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"John Updated\",\n  \"lastName\": \"Doe Updated\",\n  \"institution\": \"MIT\",\n  \"researchInterests\": [\"Deep Learning\", \"NLP\", \"Computer Vision\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"profile"
+							]
+						},
+						"description": "Update user profile (requires authentication)"
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/change-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"change-password"
+							]
+						},
+						"description": "Change user password (requires authentication)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Papers",
+			"item": [
+				{
+					"name": "Extract Metadata from PDF",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/papers/metadatafromai",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers",
+								"metadatafromai"
+							]
+						},
+						"description": "Extract metadata from PDF using AI (no authentication required)"
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Paper",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "metadata",
+									"value": "{\n  \"title\": \"Attention Is All You Need\",\n  \"abstract\": \"The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder. The best performing models also connect the encoder and decoder through an attention mechanism. We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.\",\n  \"keywords\": [\"Transformer\", \"attention mechanism\", \"self-attention\", \"sequence transduction\", \"machine translation\", \"encoder-decoder\"],\n  \"authors\": [\"Ashish Vaswani\", \"Noam Shazeer\", \"Niki Parmar\", \"Jakob Uszkoreit\", \"Llion Jones\", \"Aidan N. Gomez\", \"Łukasz Kaiser\", \"Illia Polosukhin\"],\n  \"journalName\": \"Conference on Neural Information Processing Systems (NIPS 2017)\",\n  \"publication_date\": \"2017\",\n  \"detailed_summary\": \"This paper introduces the Transformer, a novel network architecture for sequence transduction tasks that completely eschews recurrence and convolutions, relying solely on attention mechanisms.\",\n  \"paperLink\": \"https://arxiv.org/abs/1706.03762\",\n  \"gemini_analysis\": {\n    \"research_area\": \"Natural Language Processing and Deep Learning\",\n    \"methodology\": \"Proposal and evaluation of a novel neural network architecture, the Transformer, which is based entirely on attention mechanisms.\",\n    \"key_findings\": [\n      \"The Transformer model achieves state-of-the-art results on machine translation tasks\",\n      \"The architecture is significantly more parallelizable than recurrent models\",\n      \"By relying solely on self-attention, the model can effectively learn long-range dependencies\"\n    ],\n    \"limitations\": [\n      \"The paper does not explicitly state limitations of the proposed model\",\n      \"The model architecture lacks any inherent understanding of sequence order\"\n    ],\n    \"research_impact\": \"This paper is foundational in modern NLP. The introduction of the Transformer architecture marked a paradigm shift away from recurrent models towards fully attention-based models.\",\n    \"future_directions\": []\n  },\n  \"confidence_score\": 0.95\n}",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/papers/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers",
+								"upload"
+							]
+						},
+						"description": "Upload a new research paper with optional metadata. The metadata field is optional - if not provided, the system will use basic file information. For metadata extraction, use the separate endpoint: POST /api/v1/papers/metadatafromai (requires authentication)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Papers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/papers?page=1&limit=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all public papers with pagination"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Papers",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/papers/user",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers",
+								"user"
+							]
+						},
+						"description": "Get papers uploaded by the current user (requires authentication)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Paper by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/papers/{{paperId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers",
+								"{{paperId}}"
+							]
+						},
+						"description": "Get a specific paper by its ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Paper",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Research Paper Title\",\n  \"abstract\": \"Updated abstract with more details.\",\n  \"keywords\": [\"updated\", \"keywords\", \"list\"],\n  \"journalName\": \"Science\",\n  \"authors\": [\"Updated Author 1\", \"Updated Author 2\"],\n  \"isPublic\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/papers/{{paperId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers",
+								"{{paperId}}"
+							]
+						},
+						"description": "Update a paper (requires authentication and ownership)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Paper",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/papers/{{paperId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers",
+								"{{paperId}}"
+							]
+						},
+						"description": "Delete a paper (requires authentication and ownership)"
+					},
+					"response": []
+				},
+				{
+					"name": "Download Paper",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/papers/{{paperId}}/download",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"papers",
+								"{{paperId}}",
+								"download"
+							]
+						},
+						"description": "Download a paper file (requires authentication)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Search",
+			"item": [
+				{
+					"name": "Basic Search",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/search?q=machine learning&page=1&limit=10&sort=relevance&order=desc",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"search"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "machine learning"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "sort",
+									"value": "relevance"
+								},
+								{
+									"key": "order",
+									"value": "desc"
+								}
+							]
+						},
+						"description": "Basic search for papers"
+					},
+					"response": []
+				},
+				{
+					"name": "Advanced Search",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"artificial intelligence\",\n  \"filters\": {\n    \"keywords\": [\"AI\", \"machine learning\"],\n    \"journalName\": \"Nature\",\n    \"dateRange\": {\n      \"start\": \"2023-01-01T00:00:00.000Z\",\n      \"end\": \"2024-01-01T00:00:00.000Z\"\n    }\n  },\n  \"sortBy\": \"uploadedAt\",\n  \"page\": 1,\n  \"limit\": 20\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/search/advanced",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"search",
+								"advanced"
+							]
+						},
+						"description": "Advanced search with filters"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Search Suggestions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/search/suggestions?q=mac",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"search",
+								"suggestions"
+							],
+							"query": [
+								{
+									"key": "q",
+									"value": "mac"
+								}
+							]
+						},
+						"description": "Get search suggestions based on query"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Popular Keywords",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/search/keywords?limit=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"search",
+								"keywords"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": "Get popular keywords from papers"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Search Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/search/stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"search",
+								"stats"
+							]
+						},
+						"description": "Get search statistics"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Analytics",
+			"item": [
+				{
+					"name": "Get Upload Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/analytics/uploads",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analytics",
+								"uploads"
+							]
+						},
+						"description": "Get upload statistics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User Stats",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{authToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/analytics/user",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analytics",
+								"user"
+							]
+						},
+						"description": "Get current user statistics (requires authentication)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get System Health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/analytics/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analytics",
+								"health"
+							]
+						},
+						"description": "Get system health metrics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Research Insights",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/analytics/insights?timeframe=3months",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"analytics",
+								"insights"
+							],
+							"query": [
+								{
+									"key": "timeframe",
+									"value": "3months"
+								}
+							]
+						},
+						"description": "Get research insights for a specific timeframe"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "paperId",
+			"value": "",
+			"type": "string"
+		}
+	]
+} 
