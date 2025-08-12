@@ -1,4 +1,5 @@
-export const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || 'http://146.190.168.234:3003/api/v1';
+// Use env when provided; otherwise default to a same-origin relative path to avoid mixed-content in HTTPS
+export const API_BASE_URL = (import.meta as any).env?.VITE_API_URL || '/api/v1';
 
 export const API_ENDPOINTS = {
   // Authentication
