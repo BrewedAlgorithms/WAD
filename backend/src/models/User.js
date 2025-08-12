@@ -75,8 +75,7 @@ userSchema.virtual('uploadedPapers', {
   count: true
 });
 
-// Index for email searches
-userSchema.index({ email: 1 });
+// Unique index on email is already ensured by schema definition (unique: true)
 
 // Pre-save middleware to hash password
 userSchema.pre('save', async function(next) {

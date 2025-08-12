@@ -1144,3 +1144,13 @@
 {"level":"info","message":"🚀 Research Companion API running on port 3000","service":"research-companion-api","timestamp":"2025-08-12 13:36:12"}
 {"level":"info","message":"📚 Environment: development","service":"research-companion-api","timestamp":"2025-08-12 13:36:12"}
 {"level":"info","message":"🔗 Health check: http://localhost:3000/health","service":"research-companion-api","timestamp":"2025-08-12 13:36:12"}
+{"level":"info","message":"📦 MongoDB Connected: localhost","service":"research-companion-api","timestamp":"2025-08-12 13:42:42"}
+{"level":"warn","message":"⚠️ Search indexes creation failed:","service":"research-companion-api","timestamp":"2025-08-12 13:42:42"}
+{"level":"info","message":"🚀 Research Companion API running on port 3003","service":"research-companion-api","timestamp":"2025-08-12 13:42:42"}
+{"level":"info","message":"📚 Environment: development","service":"research-companion-api","timestamp":"2025-08-12 13:42:42"}
+{"level":"info","message":"🔗 Health check: http://localhost:3003/health","service":"research-companion-api","timestamp":"2025-08-12 13:42:42"}
+{"level":"info","message":"📦 MongoDB Connected: localhost","service":"research-companion-api","timestamp":"2025-08-12 13:42:46"}
+{"level":"warn","message":"⚠️ Search indexes creation failed:","service":"research-companion-api","timestamp":"2025-08-12 13:42:46"}
+{"level":"info","message":"🚀 Research Companion API running on port 3003","service":"research-companion-api","timestamp":"2025-08-12 13:42:46"}
+{"level":"info","message":"📚 Environment: development","service":"research-companion-api","timestamp":"2025-08-12 13:42:46"}
+{"level":"info","message":"🔗 Health check: http://localhost:3003/health","service":"research-companion-api","timestamp":"2025-08-12 13:42:46"}
