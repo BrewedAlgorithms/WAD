@@ -13,6 +13,7 @@ export default defineConfig({
   server: {
     port: 3001,
     host: true,
+    allowedHosts: ['durgeshkhade.me', '146.190.168.234'],
     proxy: {
       '/api': {
         target: 'http://146.190.168.234:3003',
@@ -20,6 +21,11 @@ export default defineConfig({
         secure: false,
       },
     },
+  },
+  preview: {
+    port: 3001,
+    host: true,
+    allowedHosts: ['durgeshkhade.me', '146.190.168.234'],
   },
   build: {
     outDir: 'dist',
