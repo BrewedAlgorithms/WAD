@@ -83,4 +83,23 @@ const adminAuth = async (req, res, next) => {
   }
 };
 
-module.exports = { auth, adminAuth }; 
+// Optional auth: attaches req.user if token present, otherwise continues
+const optionalAuth = async (req, _res, next) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      return next();
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select('-password');
+    if (user && user.isActive) {
+      req.user = user;
+    }
+  } catch (error) {
+    logger.warn('Optional auth failed, continuing as guest');
+  } finally {
+    next();
+  }
+};
+
+module.exports = { auth, adminAuth, optionalAuth };

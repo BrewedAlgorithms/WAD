@@ -1,4 +1,4 @@
-import { baseApi } from './baseApi';
+// Placeholder REST client replaced with fetch; integrate with RTK Query later if needed
 import { ChatbotResponse } from '@/utils/types/chatbot';
 
 export interface SendMessageRequest {
@@ -27,8 +27,12 @@ class ChatbotApi {
 
   async sendMessage(request: SendMessageRequest): Promise<SendMessageResponse> {
     try {
-      const response = await baseApi.post(`${this.baseUrl}/send`, request);
-      return response.data;
+      const res = await fetch(`${this.baseUrl}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      });
+      return await res.json();
     } catch (error: any) {
       throw new Error(error.response?.data?.error?.message || 'Failed to send message');
     }
@@ -36,8 +40,8 @@ class ChatbotApi {
 
   async getChatHistory(sessionId: string): Promise<any> {
     try {
-      const response = await baseApi.get(`${this.baseUrl}/sessions/${sessionId}`);
-      return response.data;
+      const res = await fetch(`${this.baseUrl}/sessions/${sessionId}`);
+      return await res.json();
     } catch (error: any) {
       throw new Error(error.response?.data?.error?.message || 'Failed to get chat history');
     }
@@ -45,8 +49,8 @@ class ChatbotApi {
 
   async getSessions(): Promise<any> {
     try {
-      const response = await baseApi.get(`${this.baseUrl}/sessions`);
-      return response.data;
+      const res = await fetch(`${this.baseUrl}/sessions`);
+      return await res.json();
     } catch (error: any) {
       throw new Error(error.response?.data?.error?.message || 'Failed to get sessions');
     }
@@ -54,8 +58,12 @@ class ChatbotApi {
 
   async createSession(title: string): Promise<any> {
     try {
-      const response = await baseApi.post(`${this.baseUrl}/sessions`, { title });
-      return response.data;
+      const res = await fetch(`${this.baseUrl}/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+      });
+      return await res.json();
     } catch (error: any) {
       throw new Error(error.response?.data?.error?.message || 'Failed to create session');
     }
@@ -63,8 +71,8 @@ class ChatbotApi {
 
   async deleteSession(sessionId: string): Promise<any> {
     try {
-      const response = await baseApi.delete(`${this.baseUrl}/sessions/${sessionId}`);
-      return response.data;
+      const res = await fetch(`${this.baseUrl}/sessions/${sessionId}`, { method: 'DELETE' });
+      return await res.json();
     } catch (error: any) {
       throw new Error(error.response?.data?.error?.message || 'Failed to delete session');
     }

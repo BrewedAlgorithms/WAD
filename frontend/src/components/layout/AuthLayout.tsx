@@ -6,7 +6,7 @@ const logo = '/logo.png';
 
 const AuthContainer = styled(Box)(({ theme }) => ({
   minHeight: '100vh',
-  background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+  background: `linear-gradient(180deg, ${theme.palette.grey[100]} 0%, #FFFFFF 100%)`,
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -17,8 +17,12 @@ const AuthPaper = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(4),
   maxWidth: 480,
   width: '100%',
-  borderRadius: theme.spacing(2),
-  boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+  borderRadius: 20,
+  background: 'rgba(255,255,255,0.7)',
+  backdropFilter: 'saturate(180%) blur(20px)',
+  WebkitBackdropFilter: 'saturate(180%) blur(20px)',
+  border: `1px solid ${theme.palette.divider}`,
+  boxShadow: '0 10px 30px rgba(0,0,0,0.08)'
 }));
 
 const LogoContainer = styled(Box)(({ theme }) => ({
@@ -31,11 +35,9 @@ const LogoContainer = styled(Box)(({ theme }) => ({
 }));
 
 const LogoText = styled(Typography)(({ theme }) => ({
-  fontWeight: 700,
-  background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-  backgroundClip: 'text',
-  WebkitBackgroundClip: 'text',
-  color: 'transparent',
+  fontWeight: 800,
+  letterSpacing: -0.5,
+  color: theme.palette.text.primary,
 }));
 
 interface AuthLayoutProps {

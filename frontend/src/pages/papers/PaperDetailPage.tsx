@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -44,11 +44,16 @@ import {
   ExpandMore,
   Visibility,
   PictureAsPdf,
+  Favorite,
+  FavoriteBorder,
 } from '@mui/icons-material';
-import { useGetPaperByIdQuery, useDeletePaperMutation } from '@/services/api/papersApi';
+import { useGetPaperByIdQuery, useDeletePaperMutation, useGetRelatedPapersQuery, useToggleFavoriteMutation } from '@/services/api/papersApi';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, formatRelativeDate } from '@/utils/helpers/dateUtils';
 import { ROUTES } from '@/utils/constants/routes';
+import { Document, Page, pdfjs } from 'react-pdf';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 
 const PaperDetailPage: React.FC = () => {
@@ -56,6 +61,9 @@ const PaperDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { user, token, isAuthenticated } = useAuth();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pdfScale, setPdfScale] = useState<number>(1.1);
 
   // Debug authentication state
   console.log('PaperDetailPage - Auth state:', { user, token, isAuthenticated, id });
@@ -82,6 +90,9 @@ const PaperDetailPage: React.FC = () => {
   const [deletePaper, { isLoading: deleteLoading }] = useDeletePaperMutation();
 
   const paper = paperData?.data.paper;
+  const paperId = id!;
+  const { data: relatedData } = useGetRelatedPapersQuery(paperId, { skip: !isAuthenticated || !paperId });
+  const [toggleFavorite] = useToggleFavoriteMutation();
 
   const handleEdit = () => {
     if (paper) {
@@ -106,15 +117,7 @@ const PaperDetailPage: React.FC = () => {
 
   const handleViewPaper = () => {
     if (paper) {
-      // Use Cloudinary URL if available, otherwise fallback to download endpoint
-      const viewUrl = paper.cloudinary?.url || `/api/v1/papers/${paper._id}/download`;
-      
-      // Debug logging
-      console.log('View URL:', viewUrl);
-      console.log('Cloudinary data:', paper.cloudinary);
-      
-      // Open in new window
-      window.open(viewUrl, '_blank');
+      setPdfOpen(true);
     }
   };
 
@@ -126,6 +129,8 @@ const PaperDetailPage: React.FC = () => {
   };
 
   const isOwner = user?.id === paper?.uploadedBy._id;
+  const [isFavorited, setIsFavorited] = useState<boolean>(false);
+  const relatedPapers = useMemo(() => relatedData?.data?.papers || [], [relatedData]);
 
   if (paperLoading) {
     return (
@@ -169,11 +174,28 @@ const PaperDetailPage: React.FC = () => {
               </Stack>
             </Box>
             <Stack direction="row" spacing={1}>
-              <Tooltip title="Share">
+              <Tooltip title="Share (Ctrl+C)">
                 <IconButton onClick={handleShare}>
                   <Share />
                 </IconButton>
               </Tooltip>
+              {paper && (
+                <Tooltip title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}>
+                  <IconButton
+                    onClick={async () => {
+                      try {
+                        const res = await toggleFavorite(paper._id).unwrap();
+                        setIsFavorited(res.data.favorited);
+                      } catch (e) {
+                        console.error('Favorite toggle failed', e);
+                      }
+                    }}
+                    color={isFavorited ? 'error' : 'default'}
+                  >
+                    {isFavorited ? <Favorite /> : <FavoriteBorder />}
+                  </IconButton>
+                </Tooltip>
+              )}
               {isOwner && (
                 <>
                   <Tooltip title="Edit">
@@ -432,6 +454,27 @@ const PaperDetailPage: React.FC = () => {
           {/* Sidebar */}
           <Grid item xs={12} lg={4}>
             <Stack spacing={3}>
+              {/* Related Papers */}
+              {relatedPapers.length > 0 && (
+                <Card>
+                  <CardContent>
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+                      <Visibility color="primary" />
+                      <Typography variant="h6">Related Papers</Typography>
+                    </Stack>
+                    <List dense>
+                      {relatedPapers.slice(0, 5).map((rp: any) => (
+                        <ListItem key={rp._id} button onClick={() => navigate(ROUTES.PAPERS.DETAIL(rp._id))}>
+                          <ListItemText
+                            primary={rp.title}
+                            secondary={(rp.journalName || '') + (rp.authors?.length ? ` • ${rp.authors.slice(0,2).join(', ')}` : '')}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </CardContent>
+                </Card>
+              )}
               {/* File Information */}
               <Card>
                 <CardContent>
@@ -476,7 +519,7 @@ const PaperDetailPage: React.FC = () => {
                     <Typography variant="h6">Uploaded By</Typography>
                   </Stack>
                   <Typography variant="body1" gutterBottom>
-                    {paper.uploadedBy.username}
+                    {paper.uploadedBy.firstName} {paper.uploadedBy.lastName}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {formatDate(paper.createdAt)}
@@ -625,6 +668,43 @@ const PaperDetailPage: React.FC = () => {
           </Button>
         </Tooltip>
       </Box>
+
+      {/* PDF Viewer Dialog */}
+      <Dialog open={pdfOpen} onClose={() => setPdfOpen(false)} fullWidth maxWidth="lg">
+        <DialogTitle>
+          {paper.title}
+        </DialogTitle>
+        <DialogContent dividers sx={{ height: '80vh', bgcolor: 'grey.100' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box sx={{ mb: 1, display: 'flex', gap: 1, alignItems: 'center' }}>
+              <Button size="small" onClick={() => setPdfScale((s) => Math.max(0.5, s - 0.1))}>-</Button>
+              <Typography variant="body2">Zoom {(pdfScale * 100).toFixed(0)}%</Typography>
+              <Button size="small" onClick={() => setPdfScale((s) => Math.min(2, s + 0.1))}>+</Button>
+            </Box>
+            <Box sx={{ flex: 1, overflow: 'auto' }}>
+              <Document
+                file={paper.cloudinary?.secure_url || paper.cloudinary?.url || `/api/v1/papers/${paper._id}/download`}
+                onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                onLoadError={(e) => console.error('PDF load error', e)}
+              >
+                {Array.from(new Array(numPages || 0), (_el, index) => (
+                  <Page
+                    key={`page_${index + 1}`}
+                    pageNumber={index + 1}
+                    scale={pdfScale}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                  />
+                ))}
+              </Document>
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPdfOpen(false)}>Close</Button>
+          <Button variant="contained" startIcon={<Download />} href={paper.cloudinary?.secure_url || paper.cloudinary?.url || `/api/v1/papers/${paper._id}/download`} target="_blank">Download</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

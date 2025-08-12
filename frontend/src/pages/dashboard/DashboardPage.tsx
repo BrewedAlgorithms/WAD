@@ -90,7 +90,7 @@ const DashboardPage: React.FC = () => {
       description: 'Find research papers',
       icon: <SearchIcon />,
       color: '#2e7d32',
-      action: () => navigate(ROUTES.SEARCH.ADVANCED),
+      action: () => navigate(ROUTES.PAPERS.ALL),
     },
 
   ];
@@ -195,7 +195,7 @@ const DashboardPage: React.FC = () => {
                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                           {action.title}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography variant="body2" color="text.secondary" component="span">
                           {action.description}
                         </Typography>
                       </Box>
@@ -244,7 +244,7 @@ const DashboardPage: React.FC = () => {
                       }
                       secondary={
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography variant="caption" color="text.secondary" component="span">
                             {new Date(paper.createdAt).toLocaleDateString()}
                           </Typography>
                           {paper.keywords.slice(0, 2).map((keyword) => (

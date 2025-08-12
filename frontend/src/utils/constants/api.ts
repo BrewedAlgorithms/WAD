@@ -21,6 +21,9 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/papers/${id}`,
     DELETE: (id: string) => `/papers/${id}`,
     DOWNLOAD: (id: string) => `/papers/${id}/download`,
+    RELATED: (id: string) => `/papers/${id}/related`,
+    FAVORITE: (id: string) => `/papers/${id}/favorite`,
+    MY_FAVORITES: '/papers/favorites/me',
   },
   
   // Search

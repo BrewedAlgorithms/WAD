@@ -9,12 +9,8 @@ export const baseApi = createApi({
     timeout: REQUEST_TIMEOUT,
     prepareHeaders: (headers, { getState }) => {
       const token = (getState() as RootState).auth.token;
-      console.log('BaseApi - Token:', token);
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
-        console.log('BaseApi - Authorization header set');
-      } else {
-        console.log('BaseApi - No token found');
       }
       headers.set('content-type', 'application/json');
       return headers;

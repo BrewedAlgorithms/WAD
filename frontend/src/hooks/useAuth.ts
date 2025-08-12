@@ -1,5 +1,5 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import type { RootState, AppDispatch } from '@/store';
@@ -32,15 +32,19 @@ export const useAuth = () => {
     skip: !authState.token || !!authState.user,
   });
 
-  // Update user if profile data is fetched
-  if (profileData?.data?.user && !authState.user) {
-    dispatch(updateUser(profileData.data.user));
-  }
+  // Update user if profile data is fetched (in effect to avoid render-phase updates)
+  useEffect(() => {
+    if (profileData?.data?.user && !authState.user) {
+      dispatch(updateUser(profileData.data.user));
+    }
+  }, [profileData, authState.user, dispatch]);
 
-  // Handle profile error (invalid token)
-  if (profileError && authState.token && !authState.user) {
-    dispatch(logoutAction());
-  }
+  // Handle profile error (invalid token) in effect
+  useEffect(() => {
+    if (profileError && authState.token && !authState.user) {
+      dispatch(logoutAction());
+    }
+  }, [profileError, authState.token, authState.user, dispatch]);
 
   // Set loading state while checking authentication
   const isLoading = authState.isLoading || (authState.token && !authState.user && isProfileLoading);

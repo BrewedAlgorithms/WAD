@@ -11,7 +11,10 @@ const {
   downloadPaper,
   getUserPapers,
   extractMetadataFromAI,
-  extractMetadataFromUrl
+  extractMetadataFromUrl,
+  getRelatedPapers,
+  toggleFavorite,
+  getFavoritePapers
 } = require('../controllers/paperController');
 
 const router = express.Router();
@@ -69,6 +72,10 @@ router.post('/metadatafromai', uploadMiddleware, extractMetadataFromAI);
 router.post('/metadatafromurl', validateUrlExtraction, extractMetadataFromUrl);
 router.get('/', getAllPapers);
 router.get('/user/:userId?', auth, getUserPapers);
+// Favorites must come before ID-based routes
+router.get('/favorites/me', auth, getFavoritePapers);
+router.post('/:paperId/favorite', auth, toggleFavorite);
+router.get('/:paperId/related', getRelatedPapers);
 router.get('/:paperId', auth, getPaperById);
 router.put('/:paperId', auth, validatePaperUpdate, updatePaper);
 router.delete('/:paperId', auth, deletePaper);

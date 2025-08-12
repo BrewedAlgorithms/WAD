@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -7,9 +7,7 @@ import {
   Stack,
   Alert,
   CircularProgress,
-  Button,
 } from '@mui/material';
-import { Add } from '@mui/icons-material';
 import { useGetAllPapersQuery } from '@/services/api/papersApi';
 import { useAdvancedSearchMutation } from '@/services/api/searchApi';
 import PaperList from '@/components/papers/PaperList';
@@ -33,8 +31,12 @@ interface SearchCriteria {
 const PapersPage: React.FC = () => {
   const navigate = useNavigate();
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({});
-  const [hasSearched, setHasSearched] = useState(false);
+  const location = useLocation();
+  const urlParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const initialQuery = urlParams.get('q') || '';
+  const [searchCriteria, setSearchCriteria] = useState<SearchCriteria>({ query: initialQuery });
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(!!initialQuery);
 
   // Advanced search mutation
   const [advancedSearch, { data: searchData, isLoading: searchLoading, error: searchError }] = useAdvancedSearchMutation();
@@ -52,15 +54,22 @@ const PapersPage: React.FC = () => {
   });
 
   const handleSearch = async (criteria: SearchCriteria) => {
-    setSearchCriteria(criteria);
+    // Prevent duplicate calls for the same query while in-flight
+    const normalizedQuery = (criteria.query || '').trim();
+    if (isSearching && normalizedQuery === (searchCriteria.query || '').trim()) {
+      return;
+    }
+
+    setSearchCriteria({ ...criteria, query: normalizedQuery });
     setCurrentPage(1);
     
     // If we have search criteria, use advanced search
     if (criteria.query || criteria.keywords?.length || criteria.authors?.length || criteria.journalName) {
       setHasSearched(true);
+      setIsSearching(true);
       try {
         await advancedSearch({
-          query: criteria.query,
+          query: normalizedQuery,
           filters: {
             keywords: criteria.keywords,
             authors: criteria.authors,
@@ -73,12 +82,22 @@ const PapersPage: React.FC = () => {
         }).unwrap();
       } catch (error) {
         console.error('Advanced search failed:', error);
+      } finally {
+        setIsSearching(false);
       }
     } else {
       // Reset to show all papers
       setHasSearched(false);
     }
   };
+
+  // auto-trigger search if q is in URL
+  React.useEffect(() => {
+    if (initialQuery) {
+      handleSearch({ query: initialQuery });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuery]);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -120,9 +139,7 @@ const PapersPage: React.FC = () => {
     handleSearch(newCriteria);
   };
 
-  const handleUploadClick = () => {
-    navigate(ROUTES.PAPERS.UPLOAD);
-  };
+  // Upload button removed from Papers page per request
 
   // Determine which data to use
   const papers = hasSearched ? (searchData?.data.papers || []) : (papersData?.data.papers || []);
@@ -134,25 +151,18 @@ const PapersPage: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Stack spacing={3}>
         {/* Header */}
-        <Box>
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
             <Box>
-              <Typography variant="h4" component="h1" gutterBottom>
-                All Papers
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Discover and explore research papers from the community
-              </Typography>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+                <Box>
+                  <Typography variant="h4" component="h1" gutterBottom>
+                    All Papers
+                  </Typography>
+                  <Typography variant="body1" color="text.secondary">
+                    Discover and explore research papers from the community
+                  </Typography>
+                </Box>
+              </Stack>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={handleUploadClick}
-            >
-              Upload Paper
-            </Button>
-          </Stack>
-        </Box>
 
         {/* Advanced Search Bar */}
         <Box>
@@ -200,18 +210,11 @@ const PapersPage: React.FC = () => {
             <Typography variant="h6" color="text.secondary" gutterBottom>
               No papers found
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            <Typography variant="body2" color="text.secondary">
               {hasSearched
                 ? 'Try adjusting your search criteria or browse all papers.'
-                : 'Be the first to upload a research paper!'}
+                : 'Browse recent papers or try a different query.'}
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={handleUploadClick}
-            >
-              Upload Your First Paper
-            </Button>
           </Box>
         )}
       </Stack>

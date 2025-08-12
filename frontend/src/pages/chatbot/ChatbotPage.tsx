@@ -1,35 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  Box,
-  Container,
-  Typography,
-  Paper,
-  TextField,
-  IconButton,
-  Avatar,
-  Chip,
-  CircularProgress,
-  Alert,
-  Divider,
-} from '@mui/material';
-import {
-  Send,
-  SmartToy,
-  Person,
-  Refresh,
-  Clear,
-} from '@mui/icons-material';
+import { Box, Typography, Paper, TextField, IconButton, Avatar, CircularProgress } from '@mui/material';
+import { Send, SmartToy, Person, Clear } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { Message } from '@/utils/types/chatbot';
 
 // Styled Components
 const ChatContainer = styled(Paper)(({ theme }) => ({
-  height: 'calc(100vh - 120px)',
   display: 'flex',
   flexDirection: 'column',
   borderRadius: theme.spacing(2),
   overflow: 'hidden',
   boxShadow: theme.shadows[4],
+  minHeight: '60vh',
+  height: 'calc(100dvh - 160px)',
 }));
 
 const MessagesContainer = styled(Box)(({ theme }) => ({
@@ -141,8 +124,7 @@ const ChatbotPage: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 6 }}>
-      <ChatContainer>
+      <ChatContainer sx={{ maxWidth: 1200, mx: 'auto' }}>
         {/* Chat Header */}
         <Box sx={{ p: 2, backgroundColor: 'primary.main', color: 'primary.contrastText' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -259,8 +241,6 @@ const ChatbotPage: React.FC = () => {
           </Box>
         </InputContainer>
       </ChatContainer>
-
-    </Container>
   );
 };
 

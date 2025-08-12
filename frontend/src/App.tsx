@@ -19,7 +19,8 @@ import PapersPage from './pages/papers/PapersPage';
 import PaperDetailPage from './pages/papers/PaperDetailPage';
 import UploadPage from './pages/papers/UploadPage';
 import MyPapersPage from './pages/papers/MyPapersPage';
-import AdvancedSearchPage from './pages/search/AdvancedSearchPage';
+import FavoritesPage from './pages/papers/FavoritesPage';
+import EditPaperPage from './pages/papers/EditPaperPage';
 
 // Chatbot pages
 import ChatbotPage from './pages/chatbot/ChatbotPage';
@@ -120,6 +121,16 @@ function App() {
         }
       />
       <Route
+        path={ROUTES.PAPERS.EDIT(':id' as unknown as string)}
+        element={
+          <ProtectedRoute>
+            <MainLayout>
+              <EditPaperPage />
+            </MainLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path={ROUTES.PAPERS.UPLOAD}
         element={
           <ProtectedRoute>
@@ -139,18 +150,18 @@ function App() {
           </ProtectedRoute>
         }
       />
-      
-      {/* Search Routes */}
       <Route
-        path={ROUTES.SEARCH.ADVANCED}
+        path={ROUTES.PAPERS.FAVORITES}
         element={
           <ProtectedRoute>
             <MainLayout>
-              <AdvancedSearchPage />
+              <FavoritesPage />
             </MainLayout>
           </ProtectedRoute>
         }
       />
+      
+      {/* Advanced Search removed */}
       
       {/* Chatbot Routes */}
       <Route

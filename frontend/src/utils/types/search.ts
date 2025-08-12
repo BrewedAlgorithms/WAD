@@ -39,10 +39,15 @@ export interface SearchResponse {
   };
 }
 
+export type SuggestionItem = {
+  type: 'history' | 'popular' | 'title' | 'keyword';
+  value: string;
+};
+
 export interface SearchSuggestionsResponse {
   success: boolean;
   data: {
-    suggestions: string[];
+    suggestions: SuggestionItem[];
   };
 }
 

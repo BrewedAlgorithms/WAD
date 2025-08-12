@@ -17,23 +17,31 @@ import {
   Divider,
   useTheme,
   useMediaQuery,
+  BottomNavigation,
+  BottomNavigationAction,
+  Paper as MuiPaper,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  Dashboard,
-  Description,
+  Home,
+  Article,
   Person,
   Logout,
-  Upload,
-  Folder,
+  CloudUpload,
+  LibraryBooks,
+  Favorite as FavoriteIcon,
   AccountCircle,
-  Chat,
+  SmartToy,
 } from '@mui/icons-material';
 const logo = '/logo.png';
 import { styled } from '@mui/material/styles';
+import ListSubheader from '@mui/material/ListSubheader';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/utils/constants/routes';
+import TextField from '@mui/material/TextField';
+import InputAdornment from '@mui/material/InputAdornment';
+import SearchIcon from '@mui/icons-material/Search';
 
 const drawerWidth = 240;
 
@@ -75,6 +83,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const [darkMode, setDarkMode] = useState<boolean>(() => localStorage.getItem('theme') === 'dark');
+  const [topSearch, setTopSearch] = useState('');
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -98,13 +108,40 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     }
   };
 
-  const menuItems = [
-    { text: 'Dashboard', icon: <Dashboard />, path: ROUTES.DASHBOARD },
-    { text: 'All Papers', icon: <Description />, path: ROUTES.PAPERS.ALL },
-    { text: 'My Papers', icon: <Folder />, path: ROUTES.PAPERS.MY_PAPERS },
-    { text: 'Upload Paper', icon: <Upload />, path: ROUTES.PAPERS.UPLOAD },
-    { text: 'AI Assistant', icon: <Chat />, path: ROUTES.CHATBOT },
+  const groupedMenu: Array<{ header: string; items: Array<{ text: string; icon: React.ReactNode; path: string }> }> = [
+    {
+      header: 'Primary',
+      items: [
+        { text: 'Dashboard', icon: <Home />, path: ROUTES.DASHBOARD },
+        { text: 'All Papers', icon: <Article />, path: ROUTES.PAPERS.ALL },
+        { text: 'Upload', icon: <CloudUpload />, path: ROUTES.PAPERS.UPLOAD },
+      ],
+    },
+    {
+      header: 'My Library',
+      items: [
+        { text: 'My Papers', icon: <LibraryBooks />, path: ROUTES.PAPERS.MY_PAPERS },
+        { text: 'Favorites', icon: <FavoriteIcon />, path: ROUTES.PAPERS.FAVORITES },
+      ],
+    },
+    {
+      header: 'Tools',
+      items: [
+        { text: 'AI Assistant', icon: <SmartToy />, path: ROUTES.CHATBOT },
+      ],
+    },
   ];
+
+  // Ensure only the correct sidebar item is highlighted.
+  // Some routes are parents of others (e.g., '/papers' vs '/papers/my').
+  // For these, require an exact match so we don't highlight multiple items.
+  const exactOnly = new Set<string>([ROUTES.DASHBOARD, ROUTES.PAPERS.ALL]);
+  const isSelected = (path: string) => {
+    if (exactOnly.has(path)) {
+      return location.pathname === path || location.pathname === path + '/';
+    }
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
 
   const drawer = (
     <Box>
@@ -126,40 +163,49 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </Box>
       </Toolbar>
       <Divider />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => handleNavigation(item.path)}
-              sx={{
-                '&.Mui-selected': {
-                  backgroundColor: theme.palette.primary.light + '20',
-                  '&:hover': {
-                    backgroundColor: theme.palette.primary.light + '30',
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
+      {groupedMenu.map((group) => (
+        <List
+          key={group.header}
+          subheader={
+            <ListSubheader component="div" sx={{ bgcolor: 'transparent', lineHeight: 2, fontWeight: 600 }}>
+              {group.header}
+            </ListSubheader>
+          }
+        >
+          {group.items.map((item) => (
+            <ListItem key={item.text} disablePadding>
+              <ListItemButton
+                selected={isSelected(item.path)}
+                onClick={() => handleNavigation(item.path)}
                 sx={{
-                  color: location.pathname === item.path ? theme.palette.primary.main : 'inherit',
+                  '&.Mui-selected': {
+                    backgroundColor: theme.palette.primary.light + '20',
+                    '&:hover': {
+                      backgroundColor: theme.palette.primary.light + '30',
+                    },
+                  },
                 }}
               >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText
-                primary={item.text}
-                sx={{
-                  '& .MuiTypography-root': {
-                    fontWeight: location.pathname === item.path ? 600 : 400,
-                  },
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
+                <ListItemIcon
+                  sx={{
+                    color: isSelected(item.path) ? theme.palette.primary.main : 'inherit',
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.text}
+                  sx={{
+                    '& .MuiTypography-root': {
+                      fontWeight: isSelected(item.path) ? 600 : 400,
+                    },
+                  }}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
+      ))}
     </Box>
   );
 
@@ -200,6 +246,33 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             >
               Research Companion
             </Typography>
+            {/* Top Search */}
+            <Box sx={{ display: { xs: 'none', md: 'block' }, ml: 3, flexGrow: 1, maxWidth: 520 }}>
+              <TextField
+                size="small"
+                fullWidth
+                placeholder="Search papers..."
+                value={topSearch}
+                onChange={(e) => setTopSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const q = topSearch.trim();
+                    if (!q) return;
+                    // Avoid pushing duplicate route for same query quickly
+                    const current = new URLSearchParams(location.search).get('q') || '';
+                    if (location.pathname.startsWith(ROUTES.PAPERS.ALL) && current.trim() === q) return;
+                    navigate(`${ROUTES.PAPERS.ALL}?q=${encodeURIComponent(q)}`);
+                  }
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
           </Box>
 
           <IconButton
@@ -243,6 +316,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </ListItemIcon>
               Profile
             </MenuItem>
+            <MenuItem onClick={() => { handleCloseProfileMenu(); const next = !darkMode; setDarkMode(next); localStorage.setItem('theme', next ? 'dark' : 'light'); window.location.reload(); }}>
+              <ListItemIcon>
+                <Logout fontSize="small" />
+              </ListItemIcon>
+              {darkMode ? 'Light Mode' : 'Dark Mode'}
+            </MenuItem>
             <Divider />
             <MenuItem onClick={() => { handleCloseProfileMenu(); logout(); }}>
               <ListItemIcon>
@@ -270,10 +349,46 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         </StyledDrawer>
       </Box>
 
-      <ContentArea component="main">
+      <ContentArea component="main" sx={{ pb: { xs: 8, md: 0 } }}>
         <Toolbar /> {/* Spacer for fixed AppBar */}
         {children}
       </ContentArea>
+
+      {isMobile && (
+        <MuiPaper
+          elevation={3}
+          sx={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            borderTop: (theme) => `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <BottomNavigation
+            showLabels
+            value={(() => {
+              const items = [
+                ROUTES.DASHBOARD,
+                ROUTES.PAPERS.ALL,
+                ROUTES.PAPERS.UPLOAD,
+                ROUTES.CHATBOT,
+                ROUTES.PROFILE,
+              ];
+              return items.find((p) =>
+                location.pathname === p || location.pathname.startsWith(p)
+              ) || '';
+            })()}
+            onChange={(_e, newValue) => handleNavigation(newValue)}
+          >
+            <BottomNavigationAction label="Home" value={ROUTES.DASHBOARD} icon={<Home />} />
+            <BottomNavigationAction label="Papers" value={ROUTES.PAPERS.ALL} icon={<Article />} />
+            <BottomNavigationAction label="Upload" value={ROUTES.PAPERS.UPLOAD} icon={<CloudUpload />} />
+            <BottomNavigationAction label="AI" value={ROUTES.CHATBOT} icon={<SmartToy />} />
+            <BottomNavigationAction label="Profile" value={ROUTES.PROFILE} icon={<Person />} />
+          </BottomNavigation>
+        </MuiPaper>
+      )}
     </MainContainer>
   );
 };

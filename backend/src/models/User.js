@@ -51,7 +51,11 @@ const userSchema = new mongoose.Schema({
   },
   profilePicture: {
     type: String
-  }
+  },
+  favorites: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Paper'
+  }]
 }, {
   timestamps: true,
   toJSON: { virtuals: true },

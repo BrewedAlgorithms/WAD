@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Paper = require('../models/Paper');
 const User = require('../models/User');
 const microserviceClient = require('../services/microserviceClient');
@@ -103,6 +104,120 @@ const uploadPaper = async (req, res) => {
         message: 'Failed to upload paper'
       }
     });
+  }
+};
+
+// Get related papers by shared keywords/authors/journal
+const getRelatedPapers = async (req, res) => {
+  try {
+    const { paperId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(paperId)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'INVALID_ID', message: 'Invalid paper ID' }
+      });
+    }
+    const basePaper = await Paper.findById(paperId);
+    if (!basePaper) {
+      return res.status(404).json({
+        success: false,
+        error: { code: 'PAPER_NOT_FOUND', message: 'Paper not found' }
+      });
+    }
+
+    const query = {
+      _id: { $ne: basePaper._id },
+      isPublic: true,
+      $or: []
+    };
+
+    if (basePaper.keywords && basePaper.keywords.length > 0) {
+      query.$or.push({ keywords: { $in: basePaper.keywords } });
+    }
+    if (basePaper.authors && basePaper.authors.length > 0) {
+      query.$or.push({ authors: { $in: basePaper.authors } });
+    }
+    if (basePaper.journalName) {
+      query.$or.push({ journalName: basePaper.journalName });
+    }
+
+    if (query.$or.length === 0) {
+      query.$or.push({ title: { $regex: basePaper.title.split(' ').slice(0, 3).join('|'), $options: 'i' } });
+    }
+
+    const related = await Paper.find(query)
+      .limit(10)
+      .sort({ downloadCount: -1, createdAt: -1 })
+      .populate('uploadedBy', 'firstName lastName');
+
+    res.json({
+      success: true,
+      data: { papers: related.map(p => p.getPublicData()) }
+    });
+  } catch (error) {
+    logger.error('Get related papers error:', error);
+    res.status(500).json({
+      success: false,
+      error: { code: 'RELATED_FAILED', message: 'Failed to get related papers' }
+    });
+  }
+};
+
+// Toggle favorite for current user
+const toggleFavorite = async (req, res) => {
+  try {
+    const { paperId } = req.params;
+    const userId = req.user._id;
+    if (!mongoose.Types.ObjectId.isValid(paperId)) {
+      return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid paper ID' } });
+    }
+
+    const paper = await Paper.findById(paperId).select('_id isPublic uploadedBy');
+    if (!paper) {
+      return res.status(404).json({ success: false, error: { code: 'PAPER_NOT_FOUND', message: 'Paper not found' } });
+    }
+
+    // Only allow favoriting public papers or own private ones
+    if (!paper.isPublic && paper.uploadedBy.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'Cannot favorite this paper' } });
+    }
+
+    const user = await User.findById(userId).select('favorites');
+    const already = user.favorites?.some(id => id.toString() === paperId);
+
+    let updated;
+    if (already) {
+      updated = await User.findByIdAndUpdate(userId, { $pull: { favorites: paperId } }, { new: true }).select('favorites');
+    } else {
+      updated = await User.findByIdAndUpdate(userId, { $addToSet: { favorites: paperId } }, { new: true }).select('favorites');
+    }
+
+    res.json({
+      success: true,
+      data: { favorited: !already, favoritesCount: updated.favorites.length }
+    });
+  } catch (error) {
+    logger.error('Toggle favorite error:', error);
+    res.status(500).json({ success: false, error: { code: 'FAVORITE_FAILED', message: 'Failed to update favorites' } });
+  }
+};
+
+// Get current user's favorite papers
+const getFavoritePapers = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId).populate({
+      path: 'favorites',
+      match: { $or: [{ isPublic: true }, { uploadedBy: userId }] },
+      options: { sort: { createdAt: -1 }, limit: 50 },
+      select: ''
+    });
+
+    const papers = (user.favorites || []).map((p) => p.getPublicData());
+    res.json({ success: true, data: { papers } });
+  } catch (error) {
+    logger.error('Get favorites error:', error);
+    res.status(500).json({ success: false, error: { code: 'FAVORITES_FAILED', message: 'Failed to fetch favorites' } });
   }
 };
 
@@ -699,5 +814,8 @@ module.exports = {
   downloadPaper,
   getUserPapers,
   extractMetadataFromAI,
-  extractMetadataFromUrl
+  extractMetadataFromUrl,
+  getRelatedPapers,
+  toggleFavorite,
+  getFavoritePapers
 }; 

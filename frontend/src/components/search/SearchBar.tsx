@@ -14,7 +14,6 @@ import {
   Search,
   Clear,
   TrendingUp,
-  History,
 } from '@mui/icons-material';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -23,12 +22,10 @@ interface SearchBarProps {
   onKeywordClick?: (keyword: string) => void;
   suggestions?: string[];
   popularKeywords?: string[];
-  recentSearches?: string[];
   loading?: boolean;
   placeholder?: string;
   defaultValue?: string;
   showPopularKeywords?: boolean;
-  showRecentSearches?: boolean;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({
@@ -36,12 +33,10 @@ const SearchBar: React.FC<SearchBarProps> = ({
   onKeywordClick,
   suggestions = [],
   popularKeywords = [],
-  recentSearches = [],
   loading = false,
   placeholder = 'Search papers...',
   defaultValue = '',
   showPopularKeywords = true,
-  showRecentSearches = true,
 }) => {
   const [searchTerm, setSearchTerm] = useState(defaultValue);
   const [isOpen, setIsOpen] = useState(false);
@@ -73,10 +68,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
     }
   };
 
-  const handleRecentSearchClick = (search: string) => {
-    setSearchTerm(search);
-    onSearch(search);
-  };
+  
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -197,29 +189,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
         </Box>
       )}
 
-      {/* Recent Searches */}
-      {showRecentSearches && recentSearches.length > 0 && !isOpen && (
-        <Box sx={{ mt: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-            <History sx={{ fontSize: 16, color: 'text.secondary' }} />
-            <Typography variant="body2" color="text.secondary">
-              Recent searches:
-            </Typography>
-          </Stack>
-          <Stack direction="row" spacing={1} flexWrap="wrap">
-            {recentSearches.slice(0, 5).map((search) => (
-              <Chip
-                key={search}
-                label={search}
-                size="small"
-                variant="outlined"
-                onClick={() => handleRecentSearchClick(search)}
-                sx={{ cursor: 'pointer' }}
-              />
-            ))}
-          </Stack>
-        </Box>
-      )}
+      {/* Recent Searches removed - handled by autocomplete from backend */}
     </Box>
   );
 };

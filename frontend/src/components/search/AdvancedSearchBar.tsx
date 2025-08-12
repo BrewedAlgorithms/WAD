@@ -28,9 +28,12 @@ import {
   School,
   Tag,
   DateRange,
+  TrendingUp,
+  History as HistoryIcon,
 } from '@mui/icons-material';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useGetAvailableAuthorsQuery, useGetAvailableJournalsQuery } from '@/services/api/searchApi';
+//
+import { useGetAvailableAuthorsQuery, useGetAvailableJournalsQuery, useLazyGetSearchSuggestionsQuery } from '@/services/api/searchApi';
+import type { SuggestionItem } from '@/utils/types/search';
 
 interface SearchCriteria {
   query?: string;
@@ -62,7 +65,7 @@ const AdvancedSearchBar: React.FC<AdvancedSearchBarProps> = ({
   showAdvancedFilters = true,
   currentCriteria,
 }) => {
-  // Fetch available authors and journals
+  // NOTE: Advanced filters page removed from routing; this component can be retained for future use
   const { data: authorsData, isLoading: authorsLoading } = useGetAvailableAuthorsQuery(50);
   const { data: journalsData, isLoading: journalsLoading } = useGetAvailableJournalsQuery(50);
   
@@ -79,27 +82,22 @@ const AdvancedSearchBar: React.FC<AdvancedSearchBarProps> = ({
     sortBy: 'relevance',
     sortOrder: 'desc',
   });
+  // Server-driven suggestions
+  const [triggerSuggestions, { data: suggestionsData }] = useLazyGetSearchSuggestionsQuery();
+  const suggestions: SuggestionItem[] = suggestionsData?.data.suggestions || [];
 
   // Sync with parent criteria if provided
   useEffect(() => {
     if (currentCriteria) {
       setCriteria(currentCriteria);
       setSearchTerm(currentCriteria.query || '');
+      // No local history persistence; history comes from backend
     }
   }, [currentCriteria]);
   
-  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  // Removed auto-search on debounce to avoid excessive API calls
 
-  useEffect(() => {
-    if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
-      handleSearch({ ...criteria, query: debouncedSearchTerm });
-    }
-  }, [debouncedSearchTerm]);
-
-  const handleSearch = (newCriteria: SearchCriteria) => {
-    setCriteria(newCriteria);
-    onSearch(newCriteria);
-  };
+  // removed unused helper
 
   const handleClear = () => {
     const clearedCriteria: SearchCriteria = {
@@ -115,6 +113,8 @@ const AdvancedSearchBar: React.FC<AdvancedSearchBarProps> = ({
     setCriteria(clearedCriteria);
     onSearch(clearedCriteria);
   };
+
+  const saveSearch = () => {};
 
 
 
@@ -156,63 +156,105 @@ const AdvancedSearchBar: React.FC<AdvancedSearchBarProps> = ({
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* Main Search Input */}
+      {/* Recent searches UI removed; shown within autocomplete dropdown via icons */}
+
+      {/* Unified Search Input with inline suggestions */}
       <Box sx={{ mb: 2 }}>
-        <TextField
-          fullWidth
-          placeholder={placeholder}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          variant="outlined"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search color="action" />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment position="end">
-                {loading ? (
-                  <CircularProgress color="inherit" size={20} />
-                ) : (
-                  <Stack direction="row" spacing={1}>
-                    {showAdvancedFilters && (
-                      <Button
-                        size="small"
-                        onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                        color={isAdvancedOpen ? 'primary' : 'inherit'}
-                        variant="text"
-                        startIcon={isAdvancedOpen ? <ExpandLess /> : <ExpandMore />}
-                        sx={{ 
-                          minWidth: 'auto',
-                          px: 1,
-                          py: 0.5,
-                          fontSize: '0.75rem',
-                          textTransform: 'none'
-                        }}
-                      >
-                        Filters
-                      </Button>
-                    )}
-                    {activeFiltersCount > 0 && (
-                      <IconButton
-                        size="small"
-                        onClick={handleClear}
-                        edge="end"
-                      >
-                        <Clear />
-                      </IconButton>
-                    )}
-                  </Stack>
-                )}
-              </InputAdornment>
-            ),
+        <Autocomplete
+          freeSolo
+          options={suggestions.map((s) => s.value)}
+          inputValue={searchTerm}
+          onInputChange={(_e, val) => {
+            setSearchTerm(val);
+            if (val.length >= 2) triggerSuggestions(val);
           }}
-          sx={{
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-              backgroundColor: 'background.paper',
-            },
+          onChange={(_e, val) => {
+            if (typeof val === 'string') {
+              const label = (val || '').trim();
+              const newCriteria = { ...criteria, query: label };
+              setCriteria(newCriteria);
+              onSearch(newCriteria);
+            }
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              placeholder={placeholder}
+              variant="outlined"
+              fullWidth
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const label = (searchTerm || '').trim();
+                  const newCriteria = { ...criteria, query: label };
+                  setCriteria(newCriteria);
+                  onSearch(newCriteria);
+                }
+              }}
+              InputProps={{
+                ...params.InputProps,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: (
+                  <InputAdornment position="end">
+                    {loading ? (
+                      <CircularProgress color="inherit" size={20} />
+                    ) : (
+                      <Stack direction="row" spacing={1}>
+                        {showAdvancedFilters && (
+                          <Button
+                            size="small"
+                            onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                            color={isAdvancedOpen ? 'primary' : 'inherit'}
+                            variant="text"
+                            startIcon={isAdvancedOpen ? <ExpandLess /> : <ExpandMore />}
+                            sx={{ 
+                              minWidth: 'auto',
+                              px: 1,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              textTransform: 'none'
+                            }}
+                          >
+                            Filters
+                          </Button>
+                        )}
+                        {activeFiltersCount > 0 && (
+                          <IconButton
+                            size="small"
+                            onClick={handleClear}
+                            edge="end"
+                          >
+                            <Clear />
+                          </IconButton>
+                        )}
+                      </Stack>
+                    )}
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  backgroundColor: 'background.paper',
+                },
+              }}
+            />
+          )}
+          renderOption={(props, option) => {
+            const item = suggestions.find((s) => s.value === option);
+            return (
+              <Box component="li" {...props}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  {item?.type === 'history' && <HistoryIcon />}
+                  {item?.type === 'popular' && <TrendingUp />}
+                  {!item || (item.type !== 'history' && item.type !== 'popular') ? <Search /> : null}
+                  <Typography variant="body2">{option}</Typography>
+                </Stack>
+              </Box>
+            );
           }}
         />
       </Box>
@@ -270,6 +312,8 @@ const AdvancedSearchBar: React.FC<AdvancedSearchBarProps> = ({
           </Stack>
         </Box>
       )}
+
+      {/* Recent Searches moved above */}
 
       {/* Advanced Filters */}
       <Collapse in={isAdvancedOpen}>
@@ -377,10 +421,11 @@ const AdvancedSearchBar: React.FC<AdvancedSearchBarProps> = ({
                   </Typography>
                   <Autocomplete
                     options={availableJournals}
-                    value={criteria.journalName || ''}
+                    value={criteria.journalName || null}
+                    isOptionEqualToValue={(option, value) => option === value}
                     loading={journalsLoading}
                     onChange={(_event, newValue) => {
-                      const newCriteria = { ...criteria, journalName: newValue || '' };
+                      const newCriteria = { ...criteria, journalName: (newValue as string) || '' };
                       setCriteria(newCriteria);
                       onSearch(newCriteria);
                     }}
@@ -486,6 +531,14 @@ const AdvancedSearchBar: React.FC<AdvancedSearchBarProps> = ({
                   >
                     Clear All Filters
                   </Button>
+              <Button
+                sx={{ ml: 1 }}
+                onClick={saveSearch}
+                variant="text"
+                size="small"
+              >
+                Save Search
+              </Button>
                 </Box>
               )}
             </Stack>

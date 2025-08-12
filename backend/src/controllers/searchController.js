@@ -1,4 +1,5 @@
 const Paper = require('../models/Paper');
+const SearchQuery = require('../models/SearchQuery');
 const { logger } = require('../utils/logger');
 
 // Basic search
@@ -48,6 +49,15 @@ const searchPapers = async (req, res) => {
     const totalPages = Math.ceil(totalItems / limitNum);
 
     const searchTime = Date.now() - startTime;
+
+    // Record search query to history (if query provided)
+    try {
+      if (q && q.trim()) {
+        await SearchQuery.record(req.user?._id, q);
+      }
+    } catch (historyErr) {
+      logger.warn('Failed to record search history', historyErr);
+    }
 
     res.json({
       success: true,
@@ -129,6 +139,15 @@ const advancedSearch = async (req, res) => {
 
     const searchTime = Date.now() - startTime;
 
+    // Record search query to history (if query provided)
+    try {
+      if (query && query.trim()) {
+        await SearchQuery.record(req.user?._id, query);
+      }
+    } catch (historyErr) {
+      logger.warn('Failed to record advanced search history', historyErr);
+    }
+
     res.json({
       success: true,
       data: {
@@ -160,7 +179,7 @@ const advancedSearch = async (req, res) => {
   }
 };
 
-// Get search suggestions
+// Get search suggestions (autocomplete with history + community)
 const getSearchSuggestions = async (req, res) => {
   try {
     const { q = '' } = req.query;
@@ -174,28 +193,62 @@ const getSearchSuggestions = async (req, res) => {
       });
     }
 
-    // Get suggestions from titles and keywords
+    const searchText = q.trim().toLowerCase();
+
+    // 1) Personal history suggestions (prefix match), most recent first
+    const userId = req.user?._id || null;
+    const personalHistory = await SearchQuery.find({
+      userId,
+      normalized: { $regex: `^${searchText}` },
+    })
+      .sort({ lastUsedAt: -1 })
+      .limit(5)
+      .select('query');
+
+    // 2) Community suggestions from Paper titles/keywords
     const titleSuggestions = await Paper.distinct('title', {
-      title: { $regex: q, $options: 'i' },
-      isPublic: true
-    }).limit(5);
+      title: { $regex: searchText, $options: 'i' },
+      isPublic: true,
+    });
 
     const keywordSuggestions = await Paper.distinct('keywords', {
-      keywords: { $regex: q, $options: 'i' },
-      isPublic: true
-    }).limit(5);
+      keywords: { $regex: searchText, $options: 'i' },
+      isPublic: true,
+    });
 
-    // Combine and deduplicate suggestions
-    const allSuggestions = [...titleSuggestions, ...keywordSuggestions];
-    const uniqueSuggestions = [...new Set(allSuggestions)]
-      .filter(suggestion => suggestion.toLowerCase().includes(q.toLowerCase()))
-      .slice(0, 10);
+    // 3) Global popular queries (other users), prefix match, sorted by frequency
+    const globalHistory = await SearchQuery.find({
+      userId: null,
+      normalized: { $regex: `^${searchText}` },
+    })
+      .sort({ count: -1, lastUsedAt: -1 })
+      .limit(10)
+      .select('query');
+
+    // Combine with simple scoring: prefer personal history, then global, then paper-derived
+    const combined = [
+      ...personalHistory.map((d) => ({ type: 'history', value: d.query })),
+      ...globalHistory.map((d) => ({ type: 'popular', value: d.query })),
+      ...titleSuggestions.map((t) => ({ type: 'title', value: t })),
+      ...keywordSuggestions.map((k) => ({ type: 'keyword', value: k })),
+    ];
+
+    const seen = new Set();
+    const unique = [];
+    for (const item of combined) {
+      const key = item.value.toLowerCase();
+      if (!key.includes(searchText)) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(item);
+      if (unique.length >= 10) break;
+    }
 
     res.json({
       success: true,
       data: {
-        suggestions: uniqueSuggestions
-      }
+        suggestions: unique,
+      },
     });
   } catch (error) {
     logger.error('Search suggestions error:', error);

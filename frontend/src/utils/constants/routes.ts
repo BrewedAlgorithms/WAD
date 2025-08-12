@@ -16,12 +16,10 @@ export const ROUTES = {
     UPLOAD: '/papers/upload',
     EDIT: (id: string) => `/papers/${id}/edit`,
     MY_PAPERS: '/papers/my',
+    FAVORITES: '/papers/favorites',
   },
   
-  // Search
-  SEARCH: {
-    ADVANCED: '/search/advanced',
-  },
+  // Search (removed advanced page)
   
   // Chatbot
   CHATBOT: '/chatbot',
@@ -39,6 +37,6 @@ export const BREADCRUMB_LABELS = {
   [ROUTES.PAPERS.ALL]: 'Papers',
   [ROUTES.PAPERS.UPLOAD]: 'Upload Paper',
   [ROUTES.PAPERS.MY_PAPERS]: 'My Papers',
-  [ROUTES.SEARCH.ADVANCED]: 'Advanced Search',
+  [ROUTES.PAPERS.FAVORITES]: 'Favorites',
   [ROUTES.CHATBOT]: 'AI Assistant',
 } as const;

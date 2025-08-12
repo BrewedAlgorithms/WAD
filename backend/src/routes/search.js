@@ -1,6 +1,6 @@
 const express = require('express');
 const { query, body } = require('express-validator');
-const { auth } = require('../middleware/auth');
+const { optionalAuth } = require('../middleware/auth');
 const {
   searchPapers,
   advancedSearch,
@@ -97,9 +97,9 @@ const validateKeywordsQuery = [
 ];
 
 // Routes
-router.get('/', validateSearchQuery, searchPapers);
-router.post('/advanced', validateAdvancedSearch, advancedSearch);
-router.get('/suggestions', validateSuggestionsQuery, getSearchSuggestions);
+router.get('/', optionalAuth, validateSearchQuery, searchPapers);
+router.post('/advanced', optionalAuth, validateAdvancedSearch, advancedSearch);
+router.get('/suggestions', optionalAuth, validateSuggestionsQuery, getSearchSuggestions);
 router.get('/keywords', validateKeywordsQuery, getPopularKeywords);
 router.get('/authors', getAvailableAuthors);
 router.get('/journals', getAvailableJournals);

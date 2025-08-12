@@ -30,6 +30,11 @@ export const papersApi = baseApi.injectEndpoints({
       providesTags: (_result, _error, id) => [{ type: 'Paper', id }],
     }),
     
+    getRelatedPapers: builder.query<PaperListResponse, string>({
+      query: (id) => `${API_ENDPOINTS.PAPERS.BY_ID(id)}/related`,
+      providesTags: ['Paper'],
+    }),
+    
     getUserPapers: builder.query<PaperListResponse, string | undefined>({
       query: (userId) => ({
         url: userId ? API_ENDPOINTS.PAPERS.USER_PAPERS + `/${userId}` : API_ENDPOINTS.PAPERS.USER_PAPERS,
@@ -52,6 +57,19 @@ export const papersApi = baseApi.injectEndpoints({
         method: 'DELETE',
       }),
       invalidatesTags: (_result, _error, id) => [{ type: 'Paper', id }, 'Paper'],
+    }),
+    
+    toggleFavorite: builder.mutation<ApiResponse<{ favorited: boolean; favoritesCount: number }>, string>({
+      query: (id) => ({
+        url: `${API_ENDPOINTS.PAPERS.BY_ID(id)}/favorite`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Paper'],
+    }),
+    
+    getMyFavorites: builder.query<PaperListResponse, void>({
+      query: () => `/papers/favorites/me`,
+      providesTags: ['Paper'],
     }),
     
     downloadPaper: builder.query<Blob, string>({
@@ -128,6 +146,9 @@ export const {
   useUpdatePaperMutation,
   useDeletePaperMutation,
   useLazyDownloadPaperQuery,
+  useGetRelatedPapersQuery,
+  useToggleFavoriteMutation,
+  useGetMyFavoritesQuery,
 } = papersApi;
 
 export const {
