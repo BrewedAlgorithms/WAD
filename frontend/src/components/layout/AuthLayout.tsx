@@ -35,9 +35,9 @@ const LogoContainer = styled(Box)(({ theme }) => ({
 }));
 
 const LogoText = styled(Typography)(({ theme }) => ({
-  fontWeight: 800,
+  fontWeight: 900,
   letterSpacing: -0.5,
-  color: theme.palette.text.primary,
+  color: theme.palette.primary.main,
 }));
 
 interface AuthLayoutProps {

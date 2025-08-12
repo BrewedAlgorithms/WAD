@@ -1,63 +1,58 @@
 import { createTheme } from '@mui/material/styles';
 
-// iOS-inspired MUI theme
+// Stanford brand theme
 export const theme = createTheme({
   palette: {
     primary: {
-      // iOS system blue
-      main: '#0A84FF',
-      light: '#409CFF',
-      dark: '#0060DF',
+      // Stanford Cardinal
+      main: '#8C1515',
+      light: '#B1040E',
+      dark: '#5E0F0F',
       contrastText: '#ffffff',
     },
     secondary: {
-      // iOS system pink/red
-      main: '#FF2D55',
-      light: '#FF667A',
-      dark: '#C41E3A',
+      // Stanford Cool Gray
+      main: '#4D4F53',
+      light: '#6E7074',
+      dark: '#343638',
       contrastText: '#ffffff',
     },
     success: {
-      // iOS system green
-      main: '#34C759',
+      main: '#2E7D32',
     },
     warning: {
-      // iOS system yellow
-      main: '#FFCC00',
+      main: '#FFB300',
     },
     error: {
-      // iOS system red
-      main: '#FF3B30',
+      main: '#D32F2F',
     },
     info: {
-      main: '#5AC8FA',
+      main: '#1976D2',
     },
     background: {
-      // iOS grouped background
-      default: '#F2F2F7',
+      // Stanford Fog and White
+      default: '#F4F4F4',
       paper: '#FFFFFF',
     },
     grey: {
-      // iOS-like grayscale
       50: '#FAFAFC',
-      100: '#F2F2F7',
-      200: '#E5E5EA',
-      300: '#D1D1D6',
-      400: '#C7C7CC',
-      500: '#AEAEB2',
-      600: '#8E8E93',
-      700: '#636366',
-      800: '#3A3A3C',
-      900: '#1C1C1E',
+      100: '#F4F4F4',
+      200: '#E3E2E0',
+      300: '#D6D5D3',
+      400: '#C2C1BF',
+      500: '#A6A5A3',
+      600: '#8B8A88',
+      700: '#6F6E6C',
+      800: '#535250',
+      900: '#2E2D29',
     },
     text: {
-      primary: '#1C1C1E',
-      secondary: '#636366',
+      primary: '#2E2D29',
+      secondary: '#4D4F53',
     },
-    divider: 'rgba(60, 60, 67, 0.18)',
+    divider: 'rgba(46, 45, 41, 0.18)',
   },
   typography: {
-    // Prefer iOS system font stack
     fontFamily:
       '"SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, "Helvetica Neue", Arial, sans-serif',
     h1: {
@@ -114,8 +109,8 @@ export const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundColor: '#F2F2F7',
-          color: '#1C1C1E',
+          backgroundColor: '#F4F4F4',
+          color: '#2E2D29',
           MozOsxFontSmoothing: 'grayscale',
           WebkitFontSmoothing: 'antialiased',
         },
@@ -172,20 +167,20 @@ export const theme = createTheme({
             borderRadius: 12,
             backgroundColor: '#FFFFFF',
             '& fieldset': {
-              borderColor: 'rgba(60,60,67,0.18)',
+              borderColor: 'rgba(46,45,41,0.18)',
             },
             '&:hover fieldset': {
-              borderColor: 'rgba(60,60,67,0.36)',
+              borderColor: 'rgba(46,45,41,0.36)',
             },
           },
           '& .MuiInputLabel-root': {
-            color: '#636366',
+            color: '#4D4F53',
             '&.Mui-focused': {
-              color: '#0A84FF',
+              color: '#8C1515',
             },
           },
           '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#0A84FF',
+            borderColor: '#8C1515',
           },
         },
       },
@@ -193,11 +188,11 @@ export const theme = createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: 'rgba(255,255,255,0.7)',
+          backgroundColor: 'rgba(255,255,255,0.9)',
           backdropFilter: 'saturate(180%) blur(20px)',
           WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-          color: '#1C1C1E',
-          boxShadow: '0 1px 0 rgba(0,0,0,0.06)',
+          color: '#2E2D29',
+          boxShadow: '0 1px 0 rgba(140,21,21,0.12)',
         },
       },
     },
@@ -205,7 +200,7 @@ export const theme = createTheme({
       styleOverrides: {
         paper: {
           backgroundColor: '#FFFFFF',
-          borderRight: '1px solid rgba(60,60,67,0.18)',
+          borderRight: '1px solid rgba(46,45,41,0.18)',
         },
       },
     },
@@ -221,13 +216,13 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiInputLabel-root': {
-            color: '#636366',
+            color: '#4D4F53',
             '&.Mui-focused': {
-              color: '#0A84FF',
+              color: '#8C1515',
             },
           },
           '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-            borderColor: '#0A84FF',
+            borderColor: '#8C1515',
           },
         },
       },
@@ -238,7 +233,7 @@ export const theme = createTheme({
           backgroundColor: 'rgba(255,255,255,0.7)',
           backdropFilter: 'saturate(180%) blur(20px)',
           WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-          borderTop: '1px solid rgba(60,60,67,0.18)',
+          borderTop: '1px solid rgba(46,45,41,0.18)',
         },
       },
     },

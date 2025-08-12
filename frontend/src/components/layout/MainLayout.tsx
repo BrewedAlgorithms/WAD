@@ -146,7 +146,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const drawer = (
     <Box>
       <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
           <Box
             component="img"
             src={logo}
@@ -157,7 +157,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               mr: 2
             }}
           />
-          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, color: theme.palette.primary.main }}>
             Research Companion
           </Typography>
         </Box>
@@ -240,7 +240,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               noWrap 
               component="div" 
               sx={{ 
-                fontWeight: 600,
+                fontWeight: 800,
+                color: theme.palette.primary.main,
                 display: { xs: 'none', md: 'block' }
               }}
             >

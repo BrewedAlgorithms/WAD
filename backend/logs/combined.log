@@ -1164,3 +1164,12 @@
 {"level":"info","message":"🚀 Research Companion API running on port 3003","service":"research-companion-api","timestamp":"2025-08-12 13:47:49"}
 {"level":"info","message":"📚 Environment: development","service":"research-companion-api","timestamp":"2025-08-12 13:47:49"}
 {"level":"info","message":"🔗 Health check: http://localhost:3003/health","service":"research-companion-api","timestamp":"2025-08-12 13:47:49"}
+{"level":"info","message":"📦 MongoDB Connected: localhost","service":"research-companion-api","timestamp":"2025-08-12 14:08:24"}
+{"level":"warn","message":"⚠️ Search indexes creation failed:","service":"research-companion-api","timestamp":"2025-08-12 14:08:24"}
+{"level":"info","message":"📦 MongoDB Connected: localhost","service":"research-companion-api","timestamp":"2025-08-12 14:09:20"}
+{"level":"warn","message":"⚠️ Search indexes creation failed:","service":"research-companion-api","timestamp":"2025-08-12 14:09:20"}
+{"level":"info","message":"🚀 Research Companion API running on port 3003","service":"research-companion-api","timestamp":"2025-08-12 14:09:20"}
+{"level":"info","message":"📚 Environment: development","service":"research-companion-api","timestamp":"2025-08-12 14:09:20"}
+{"level":"info","message":"🔗 Health check: http://localhost:3003/health","service":"research-companion-api","timestamp":"2025-08-12 14:09:20"}
+{"level":"info","message":"User logged in: durgeshkhade001@gmail.com","service":"research-companion-api","timestamp":"2025-08-12 14:10:44"}
+{"level":"info","message":"User logged in: durgeshkhade001@gmail.com","service":"research-companion-api","timestamp":"2025-08-12 14:19:11"}
