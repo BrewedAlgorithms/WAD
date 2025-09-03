@@ -5,16 +5,11 @@
 - Docker Compose v2
 
 ## 1) Set env vars
-Create a `.env` at repo root (same folder as `docker-compose.yml`):
+Use the existing per-service env files:
+- `backend/.env` (includes JWT, Mongo URI, Cloudinary, etc.)
+- `microservices_python/.env` (includes `GEMINI_API_KEY` and other Python settings)
 
-```
-JWT_SECRET=change-me
-GEMINI_API_KEY=your-key
-# Optional Cloudinary
-# CLOUDINARY_CLOUD_NAME=
-# CLOUDINARY_API_KEY=
-# CLOUDINARY_API_SECRET=
-```
+Compose will load those files automatically. You do not need a root `.env`.
 
 ## 2) Build and run
 
