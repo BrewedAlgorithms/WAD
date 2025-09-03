@@ -1173,3 +1173,4 @@
 {"level":"info","message":"🔗 Health check: http://localhost:3003/health","service":"research-companion-api","timestamp":"2025-08-12 14:09:20"}
 {"level":"info","message":"User logged in: durgeshkhade001@gmail.com","service":"research-companion-api","timestamp":"2025-08-12 14:10:44"}
 {"level":"info","message":"User logged in: durgeshkhade001@gmail.com","service":"research-companion-api","timestamp":"2025-08-12 14:19:11"}
+{"level":"info","message":"📦 MongoDB Connected: localhost","service":"research-companion-api","timestamp":"2025-08-12 14:27:56"}

@@ -16,8 +16,8 @@ export default defineConfig({
     allowedHosts: ['durgeshkhade.me', '146.190.168.234'],
     proxy: {
       '/api': {
-        target: 'http://146.190.168.234:3003',
-        // target: 'http://localhost:3003',
+        // target: 'http://146.190.168.234:3003',
+        target: 'http://localhost:3003',
         changeOrigin: true,
         secure: false,
       },

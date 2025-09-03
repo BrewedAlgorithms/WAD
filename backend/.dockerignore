@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+logs
+uploads
+temp
+.git
+.env
+*.local
+
+
