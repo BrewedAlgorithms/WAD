@@ -854,6 +854,17 @@ const analyzeGorardSieve = async (req, res) => {
       );
     }
 
+    // Validate that a file path exists for processing
+    if (!filePathForProcessing) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'FILE_NOT_AVAILABLE',
+          message: 'The paper file is not available for analysis. It may not have been uploaded correctly.'
+        }
+      });
+    }
+
     // Perform Gorard Sieve analysis
     let analysisResult;
     try {

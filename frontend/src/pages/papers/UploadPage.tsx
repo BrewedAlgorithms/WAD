@@ -792,7 +792,7 @@ const UploadPage: React.FC = () => {
                 <Button
                   variant="outlined"
                   onClick={() => navigate(-1)}
-                  disabled={isUploading}
+                  disabled={isUploading || isAnalyzingGorardSieve}
                 >
                   Cancel
                 </Button>
