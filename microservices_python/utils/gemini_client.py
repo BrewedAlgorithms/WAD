@@ -225,6 +225,112 @@ def _create_fallback_response(json_schema: Dict[str, Any]) -> Dict[str, Any]:
 
 # --- Specific Task Functions ---
 
+def get_gorard_sieve_rating(text: str) -> Dict[str, Any]:
+    """
+    Uses Gemini to evaluate research paper quality using the Gorard Sieve rubric.
+    
+    The Gorard Sieve is a standardized process for judging the quality and trustworthiness 
+    of research study findings. It evaluates papers across multiple dimensions and produces 
+    an overall rating based on the "lowest link" principle.
+    
+    Args:
+        text (str): The full text content of the research paper.
+        
+    Returns:
+        A dictionary containing scores and reasoning for each category, plus overall rating.
+    """
+    instructions = """You are a world-leading research methodologist and academic evaluator, embodying the principles of the Gorard Sieve. Your task is to perform a sophisticated evaluation of the provided research paper. Your judgment must be nuanced, context-aware, and strictly evidence-based, reflecting the Sieve's reliance on informed expert judgment over rigid, mechanical thresholds. This analysis will be performed using a Gemini 2.5 Pro caliber model.
+
+**CORE PRINCIPLES OF THE GORARD SIEVE**
+
+1.  **Informed Judgment Over Arbitrary Thresholds**: The Sieve is a tool for thought, not a simple checklist. Do not rely on simplistic numerical cutoffs. For example, the significance of a study's scale depends on its research question and field. The impact of data loss depends more on the *reason* for the loss and its potential for bias than the raw percentage.
+2.  **The 'Lowest Link' Principle**: A study's overall trustworthiness is determined by its weakest component. Your final rating for the paper will be the minimum score from any of the six categories.
+3.  **Strictly Evidence-Based**: Every score you assign must be meticulously justified with direct quotes, paraphrased summaries of specific sections, or other concrete evidence from the paper.
+
+**EVALUATION CATEGORIES AND CRITERIA (Scale: 0=Lowest, 4=Highest)**
+
+**1. DESIGN (Research Design Quality)**
+*   **Rating 4 (Highest)**: True Randomized Controlled Trial (RCT) with proper random assignment, appropriate comparison groups, and minimal selection bias, allowing for clear causal inference.
+*   **Rating 3**: Quasi-experimental design with well-matched (but not random) comparison groups. Controls for major confounding variables are present.
+*   **Rating 2**: Weaker comparison design (e.g., pre/post, historical controls) where selection bias is a significant concern and causal claims are tenuous.
+*   **Rating 1**: Primarily descriptive, exploratory, or single-group design with no meaningful comparison group.
+*   **Rating 0**: No systematic methodology or consideration of design; relies on anecdotal evidence.
+
+**2. SCALE (Sample Size and Scope)**
+*   **Rating 4 (Highest)**: The scale is demonstrably large enough to provide strong statistical power and detect meaningful effects *for the specific research question and population being studied*. The authors may provide a power analysis or a strong justification for the sample size.
+*   **Rating 3**: The scale is adequate for the primary analyses, though perhaps underpowered for secondary or subgroup analyses. The sample size is reasonable and justified for its context.
+*   **Rating 2**: The scale is small, limiting statistical power and requiring cautious interpretation of results. The findings may be more indicative than conclusive.
+*   **Rating 1**: The scale is very small, rendering most statistical analyses underpowered and the results highly uncertain.
+*   **Rating 0**: The scale is trivial, unclear, or not reported.
+
+**3. COMPLETENESS OF DATA (Data Attrition/Missing Data)**
+*   **Rating 4 (Highest)**: Minimal missing data with a thorough analysis (e.g., MCAR/MAR tests) showing no evidence of systematic or differential attrition between groups. The authors properly address any data loss.
+*   **Rating 3**: Low levels of missing data, with authors providing a reasonable argument that it is unlikely to substantially bias the results. Attrition is roughly equal across groups.
+*   **Rating 2**: Moderate data loss with some evidence of non-random attrition. This introduces a potential for bias that is acknowledged but not fully mitigated by the authors.
+*   **Rating 1**: High levels of missing data with clear evidence of systematic or differential attrition, creating a likely and significant bias in the results.
+*   **Rating 0**: Huge amount of missing data, or data loss is not reported or addressed at all. The validity is severely threatened.
+
+**4. DATA QUALITY (Outcome Measures Quality)**
+*   **Rating 4 (Highest)**: Uses standardized, validated, and reliable measurement instruments that are objective and pre-specified. The measures are clearly appropriate for the research questions.
+*   **Rating 3**: Uses mostly standardized and reliable measures, with good validity. Measures are generally objective and pre-specified.
+*   **Rating 2**: A mix of standardized and ad-hoc/unvalidated measures. Reliability or validity may be moderate or not fully reported. Subjectivity in measurement is a concern.
+*   **Rating 1**: Primarily uses non-standardized, ad-hoc measures with questionable or unreported reliability and validity. Outcomes may have been selected post-hoc.
+*   **Rating 0**: Uses very weak measures with no evidence of reliability or validity. The accuracy of the outcomes cannot be trusted.
+
+**5. FIDELITY (Implementation Fidelity)**
+*   **Rating 4 (Highest)**: The intervention was implemented exactly as intended, with strong monitoring, clear documentation, and evidence of high adherence to the protocol.
+*   **Rating 3**: Good implementation with only minor, well-documented deviations from the protocol. Monitoring was adequate.
+*   **Rating 2**: Moderate implementation quality with significant deviations from the protocol that could affect outcomes. Monitoring was limited.
+*   **Rating 1**: Poor implementation with major deviations from the protocol. There was little to no monitoring or quality control.
+*   **Rating 0**: Implementation fidelity was not considered or documented. (If not applicable to the study design, rate conservatively based on procedural clarity).
+
+**6. VALIDITY (Overall Study Validity)**
+*   **Rating 4 (Highest)**: High internal and external validity. The authors explicitly identify and convincingly control for major threats to validity. Conclusions are well-supported and generalizable.
+*   **Rating 3**: Good overall validity, with minor or well-acknowledged threats. Conclusions are mostly justified and have reasonable generalizability.
+*   **Rating 2**: Moderate validity concerns. Some significant threats to internal or external validity are not fully addressed, limiting generalizability.
+*   **Rating 1**: Significant threats to validity are present and largely unaddressed. Conclusions are weakly supported and generalizability is poor.
+*   **Rating 0**: Severe and numerous validity problems. The study's conclusions are not credible or justifiable.
+
+**EVALUATION INSTRUCTIONS:**
+
+1.  **Analyze Holistically**: Read the entire paper to understand its context, objectives, and limitations.
+2.  **Score and Justify**: For each of the six categories, assign a score from 0-4.
+3.  **Provide Rigorous Reasoning**: Your reasoning is the most critical part of the output. For each score, you MUST:
+    *   Provide a detailed explanation for your rating.
+    *   Support your explanation with direct quotes or specific, cited evidence (e.g., "As stated on page 5, '...'"; "The methodology section describes the sample as...").
+    *   Clearly connect the evidence from the paper to the specific criteria in the rubric.
+    *   Note any missing information that forces a more conservative (lower) rating.
+"""
+
+    schema = {
+        "design": {
+            "score": "number (0-4)",
+            "reasoning": "string - detailed explanation with evidence from paper"
+        },
+        "scale": {
+            "score": "number (0-4)",
+            "reasoning": "string - detailed explanation with evidence from paper"
+        },
+        "completeness_of_data": {
+            "score": "number (0-4)",
+            "reasoning": "string - detailed explanation with evidence from paper"
+        },
+        "data_quality": {
+            "score": "number (0-4)",
+            "reasoning": "string - detailed explanation with evidence from paper"
+        },
+        "fidelity": {
+            "score": "number (0-4)",
+            "reasoning": "string - detailed explanation with evidence from paper"
+        },
+        "validity": {
+            "score": "number (0-4)",
+            "reasoning": "string - detailed explanation with evidence from paper"
+        }
+    }
+    
+    return generate_json_from_text(text, instructions, schema)
+
 def get_metadata_from_text(text: str, need_summary: bool = False) -> Dict[str, Any]:
     """
     Uses Gemini to extract structured metadata and optionally a summary from text.

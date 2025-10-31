@@ -128,6 +128,55 @@ class MicroserviceClient {
   }
 
   /**
+   * Analyze paper using Gorard Sieve rubric
+   * @param {string} filePath - Path to the PDF file
+   * @returns {Promise<Object>} - Gorard Sieve rating results
+   */
+  async analyzeGorardSieve(filePath) {
+    try {
+      logger.info(`Starting Gorard Sieve analysis for: ${filePath}`);
+      
+      // Check if file exists
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File not found: ${filePath}`);
+      }
+
+      // Create form data
+      const formData = new FormData();
+      formData.append('file', fs.createReadStream(filePath));
+
+      const response = await this.client.post('/gorard-sieve/analyze-gorard-sieve', formData, {
+        headers: {
+          ...formData.getHeaders(),
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity
+      });
+
+      if (response.data.success) {
+        logger.info('Gorard Sieve analysis successful');
+        return response.data;
+      } else {
+        throw new Error('Gorard Sieve analysis failed: ' + response.data.error?.message);
+      }
+    } catch (error) {
+      logger.error('Gorard Sieve analysis error:', error);
+      
+      if (error.response) {
+        // Server responded with error status
+        const errorData = error.response.data;
+        throw new Error(errorData.error?.message || 'Gorard Sieve analysis failed');
+      } else if (error.request) {
+        // Network error
+        throw new Error('Microservice is unavailable. Please try again later.');
+      } else {
+        // Other error
+        throw new Error(error.message || 'Gorard Sieve analysis failed');
+      }
+    }
+  }
+
+  /**
    * Get microservice documentation URL
    * @returns {string} - Documentation URL
    */

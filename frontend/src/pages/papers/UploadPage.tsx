@@ -35,7 +35,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   useUploadPaperMutation, 
   useExtractMetadataFromAIMutation,
-  useExtractMetadataFromUrlMutation
+  useExtractMetadataFromUrlMutation,
+  useAnalyzeGorardSieveMutation
 } from '@/services/api/papersApi';
 import { ROUTES } from '@/utils/constants/routes';
 
@@ -75,10 +76,13 @@ const UploadPage: React.FC = () => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
   const [paperUrl, setPaperUrl] = useState('');
+  const [enableGorardSieve, setEnableGorardSieve] = useState(false);
+  const [isAnalyzingGorardSieve, setIsAnalyzingGorardSieve] = useState(false);
   
   const [uploadPaper, { isLoading: isUploading }] = useUploadPaperMutation();
   const [extractMetadata] = useExtractMetadataFromAIMutation();
   const [extractMetadataFromUrl] = useExtractMetadataFromUrlMutation();
+  const [analyzeGorardSieve] = useAnalyzeGorardSieveMutation();
 
   const {
     register,
@@ -307,7 +311,25 @@ const UploadPage: React.FC = () => {
 
       if (result.success) {
         toast.success('Paper uploaded successfully!');
-        // Redirect to the paper detail page instead of papers list
+        
+        // If Gorard Sieve analysis is enabled, trigger it automatically
+        if (enableGorardSieve) {
+          try {
+            setIsAnalyzingGorardSieve(true);
+            toast.info('Starting Gorard Sieve trustworthiness analysis...');
+            
+            await analyzeGorardSieve(result.data.paper._id).unwrap();
+            
+            toast.success('Trustworthiness analysis completed!');
+          } catch (analysisError: any) {
+            console.error('Gorard Sieve analysis error:', analysisError);
+            toast.warning('Paper uploaded, but trustworthiness analysis failed. You can analyze it later from the paper details page.');
+          } finally {
+            setIsAnalyzingGorardSieve(false);
+          }
+        }
+        
+        // Redirect to the paper detail page
         navigate(ROUTES.PAPERS.DETAIL(result.data.paper._id));
       }
     } catch (error: any) {
@@ -426,7 +448,7 @@ const UploadPage: React.FC = () => {
                   disabled={isExtracting}
                   fullWidth
                 >
-                  {isExtracting ? 'Extracting Metadata...' : 'Extract Metadata with AI'}
+                  {isExtracting ? 'Importing Paper...' : 'Import Paper'}
                 </Button>
                 {isExtracting && <LinearProgress sx={{ mt: 1 }} />}
               </Box>
@@ -453,7 +475,7 @@ const UploadPage: React.FC = () => {
                   disabled={!paperUrl || isExtracting}
                   fullWidth
                 >
-                  {isExtracting ? 'Extracting Metadata...' : 'Extract Metadata from URL'}
+                  {isExtracting ? 'Importing Paper...' : 'Import from URL'}
                 </Button>
                 {isExtracting && <LinearProgress sx={{ mt: 1 }} />}
               </Box>
@@ -634,6 +656,62 @@ const UploadPage: React.FC = () => {
                 )}
               />
 
+              {/* Gorard Sieve Analysis Toggle */}
+              <Box 
+                sx={{ 
+                  mt: 3, 
+                  p: 3, 
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: 2, 
+                  border: '2px solid',
+                  borderColor: enableGorardSieve ? '#1976d2' : '#e0e0e0',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    borderColor: '#1976d2',
+                    backgroundColor: '#fafafa'
+                  }
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={enableGorardSieve}
+                      onChange={(e) => setEnableGorardSieve(e.target.checked)}
+                      disabled={isUploading || isAnalyzingGorardSieve}
+                      color="primary"
+                    />
+                  }
+                  label={
+                    <Box sx={{ ml: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#1976d2' }}>
+                          🛡️ Analyze Trustworthiness (Gorard Sieve)
+                        </Typography>
+                        {enableGorardSieve && (
+                          <Chip 
+                            label="Enabled" 
+                            size="small" 
+                            sx={{ 
+                              backgroundColor: '#e3f2fd', 
+                              color: '#1976d2',
+                              fontWeight: 600,
+                              fontSize: '0.7rem'
+                            }} 
+                          />
+                        )}
+                      </Box>
+                      <Typography variant="body2" sx={{ color: '#666', mt: 0.5, lineHeight: 1.6 }}>
+                        Automatically evaluate research quality using the Gorard Sieve rubric after upload.
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#999', display: 'block', mt: 0.5, fontStyle: 'italic' }}>
+                        ⏱️ This will take an additional 30-60 seconds
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ alignItems: 'flex-start', m: 0 }}
+                />
+              </Box>
+
               {/* Research Analysis Section */}
               <Divider sx={{ my: 3 }} />
               
@@ -706,10 +784,10 @@ const UploadPage: React.FC = () => {
                   type="submit"
                   variant="contained"
                   startIcon={<SaveIcon />}
-                  disabled={isUploading || (uploadMethod === 'file' && !selectedFile) || (uploadMethod === 'url' && !paperUrl)}
+                  disabled={isUploading || isAnalyzingGorardSieve || (uploadMethod === 'file' && !selectedFile) || (uploadMethod === 'url' && !paperUrl)}
                   sx={{ flexGrow: 1 }}
                 >
-                  {isUploading ? 'Uploading...' : 'Upload Paper'}
+                  {isAnalyzingGorardSieve ? 'Analyzing Trustworthiness...' : isUploading ? 'Uploading...' : 'Upload Paper'}
                 </Button>
                 <Button
                   variant="outlined"
@@ -720,11 +798,13 @@ const UploadPage: React.FC = () => {
                 </Button>
               </Box>
 
-              {isUploading && (
+              {(isUploading || isAnalyzingGorardSieve) && (
                 <Box sx={{ mt: 2 }}>
                   <LinearProgress />
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                    Uploading and processing your paper...
+                    {isAnalyzingGorardSieve 
+                      ? 'Analyzing paper trustworthiness with Gorard Sieve... This may take up to 60 seconds.'
+                      : 'Uploading and processing your paper...'}
                   </Typography>
                 </Box>
               )}

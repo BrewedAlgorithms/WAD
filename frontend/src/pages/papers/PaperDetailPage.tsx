@@ -46,8 +46,10 @@ import {
   PictureAsPdf,
   Favorite,
   FavoriteBorder,
+  VerifiedUser,
+  Science,
 } from '@mui/icons-material';
-import { useGetPaperByIdQuery, useDeletePaperMutation, useGetRelatedPapersQuery, useToggleFavoriteMutation } from '@/services/api/papersApi';
+import { useGetPaperByIdQuery, useDeletePaperMutation, useGetRelatedPapersQuery, useToggleFavoriteMutation, useAnalyzeGorardSieveMutation } from '@/services/api/papersApi';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate, formatRelativeDate } from '@/utils/helpers/dateUtils';
 import { ROUTES } from '@/utils/constants/routes';
@@ -64,6 +66,7 @@ const PaperDetailPage: React.FC = () => {
   const [pdfOpen, setPdfOpen] = useState(false);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pdfScale, setPdfScale] = useState<number>(1.1);
+  const [isAnalyzingGorardSieve, setIsAnalyzingGorardSieve] = useState(false);
 
   // Debug authentication state
   console.log('PaperDetailPage - Auth state:', { user, token, isAuthenticated, id });
@@ -88,6 +91,7 @@ const PaperDetailPage: React.FC = () => {
   });
 
   const [deletePaper, { isLoading: deleteLoading }] = useDeletePaperMutation();
+  const [analyzeGorardSieve] = useAnalyzeGorardSieveMutation();
 
   const paper = paperData?.data.paper;
   const paperId = id!;
@@ -125,6 +129,20 @@ const PaperDetailPage: React.FC = () => {
     if (paper) {
       navigator.clipboard.writeText(window.location.href);
       // Could show a snackbar notification here
+    }
+  };
+
+  const handleAnalyzeGorardSieve = async () => {
+    if (paper) {
+      setIsAnalyzingGorardSieve(true);
+      try {
+        await analyzeGorardSieve(paper._id).unwrap();
+        // The query will automatically refetch due to cache invalidation
+      } catch (error) {
+        console.error('Failed to analyze with Gorard Sieve:', error);
+      } finally {
+        setIsAnalyzingGorardSieve(false);
+      }
     }
   };
 
@@ -321,7 +339,294 @@ const PaperDetailPage: React.FC = () => {
                 </CardContent>
               </Card>
 
+              {/* Gorard Sieve Trustworthiness Rating Section (2nd) */}
+              <Card>
+                <CardContent>
+                  <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
+                      <VerifiedUser color="primary" />
+                      <Typography variant="h6">Trustworthiness Rating (Gorard Sieve)</Typography>
+                    </Stack>
+                    {isOwner && !paper.gorard_sieve_rating && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<Science />}
+                        onClick={handleAnalyzeGorardSieve}
+                        disabled={isAnalyzingGorardSieve}
+                      >
+                        {isAnalyzingGorardSieve ? 'Analyzing...' : 'Analyze'}
+                      </Button>
+                    )}
+                  </Stack>
 
+                  {paper.gorard_sieve_rating ? (
+                    <>
+                      {/* Overall Rating Display */}
+                      <Box
+                        sx={{
+                          backgroundColor: paper.gorard_sieve_rating.overall_rating >= 3 
+                            ? '#e8f5e9'  // Light green
+                            : paper.gorard_sieve_rating.overall_rating >= 2 
+                            ? '#fff3e0'  // Light orange
+                            : '#ffebee', // Light red
+                          border: `3px solid ${
+                            paper.gorard_sieve_rating.overall_rating >= 3 
+                            ? '#4caf50'  // Green
+                            : paper.gorard_sieve_rating.overall_rating >= 2 
+                            ? '#ff9800'  // Orange
+                            : '#f44336'  // Red
+                          }`,
+                          p: 4,
+                          borderRadius: 3,
+                          mb: 3,
+                          textAlign: 'center',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        }}
+                      >
+                        <Typography 
+                          variant="h2" 
+                          sx={{ 
+                            fontWeight: 800, 
+                            color: paper.gorard_sieve_rating.overall_rating >= 3 
+                              ? '#2e7d32'  // Dark green
+                              : paper.gorard_sieve_rating.overall_rating >= 2 
+                              ? '#e65100'  // Dark orange
+                              : '#c62828', // Dark red
+                            mb: 1 
+                          }}
+                        >
+                          {paper.gorard_sieve_rating.overall_rating}/4
+                        </Typography>
+                        <Typography variant="h6" sx={{ color: '#424242', fontWeight: 600, mb: 0.5 }}>
+                          Overall Trustworthiness Score
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: '#616161', maxWidth: '600px', mx: 'auto', mt: 2, lineHeight: 1.6 }}>
+                          Based on the "lowest link" principle - the minimum score across all categories
+                        </Typography>
+                        {paper.gorard_sieve_rating.analysis_date && (
+                          <Typography variant="caption" sx={{ color: '#757575', display: 'block', mt: 1.5 }}>
+                            Analyzed on {formatDate(paper.gorard_sieve_rating.analysis_date)}
+                          </Typography>
+                        )}
+                      </Box>
+
+                      {/* Detailed Breakdown */}
+                      <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+                        Detailed Breakdown
+                      </Typography>
+
+                      {/* Design */}
+                      <Accordion sx={{ mb: 1, '&:before': { display: 'none' }, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                        <AccordionSummary 
+                          expandIcon={<ExpandMore />}
+                          sx={{ 
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
+                            borderLeft: `4px solid ${paper.gorard_sieve_rating.design.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.design.score >= 2 ? '#ff9800' : '#f44336'}`
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                            <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
+                              Design (Research Design Quality)
+                            </Typography>
+                            <Chip 
+                              label={`${paper.gorard_sieve_rating.design.score}/4`} 
+                              sx={{
+                                backgroundColor: paper.gorard_sieve_rating.design.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.design.score >= 2 ? '#ff9800' : '#f44336',
+                                color: 'white',
+                                fontWeight: 700
+                              }}
+                              size="small"
+                            />
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                            {paper.gorard_sieve_rating.design.reasoning}
+                          </Typography>
+                        </AccordionDetails>
+                      </Accordion>
+
+                      {/* Scale */}
+                      <Accordion sx={{ mb: 1, '&:before': { display: 'none' }, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                        <AccordionSummary 
+                          expandIcon={<ExpandMore />}
+                          sx={{ 
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
+                            borderLeft: `4px solid ${paper.gorard_sieve_rating.scale.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.scale.score >= 2 ? '#ff9800' : '#f44336'}`
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                            <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
+                              Scale (Sample Size and Scope)
+                            </Typography>
+                            <Chip 
+                              label={`${paper.gorard_sieve_rating.scale.score}/4`} 
+                              sx={{
+                                backgroundColor: paper.gorard_sieve_rating.scale.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.scale.score >= 2 ? '#ff9800' : '#f44336',
+                                color: 'white',
+                                fontWeight: 700
+                              }}
+                              size="small"
+                            />
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                            {paper.gorard_sieve_rating.scale.reasoning}
+                          </Typography>
+                        </AccordionDetails>
+                      </Accordion>
+
+                      {/* Completeness of Data */}
+                      <Accordion sx={{ mb: 1, '&:before': { display: 'none' }, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                        <AccordionSummary 
+                          expandIcon={<ExpandMore />}
+                          sx={{ 
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
+                            borderLeft: `4px solid ${paper.gorard_sieve_rating.completeness_of_data.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.completeness_of_data.score >= 2 ? '#ff9800' : '#f44336'}`
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                            <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
+                              Completeness of Data (Missing Data/Attrition)
+                            </Typography>
+                            <Chip 
+                              label={`${paper.gorard_sieve_rating.completeness_of_data.score}/4`} 
+                              sx={{
+                                backgroundColor: paper.gorard_sieve_rating.completeness_of_data.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.completeness_of_data.score >= 2 ? '#ff9800' : '#f44336',
+                                color: 'white',
+                                fontWeight: 700
+                              }}
+                              size="small"
+                            />
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                            {paper.gorard_sieve_rating.completeness_of_data.reasoning}
+                          </Typography>
+                        </AccordionDetails>
+                      </Accordion>
+
+                      {/* Data Quality */}
+                      <Accordion sx={{ mb: 1, '&:before': { display: 'none' }, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                        <AccordionSummary 
+                          expandIcon={<ExpandMore />}
+                          sx={{ 
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
+                            borderLeft: `4px solid ${paper.gorard_sieve_rating.data_quality.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.data_quality.score >= 2 ? '#ff9800' : '#f44336'}`
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                            <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
+                              Data Quality (Outcome Measures Quality)
+                            </Typography>
+                            <Chip 
+                              label={`${paper.gorard_sieve_rating.data_quality.score}/4`} 
+                              sx={{
+                                backgroundColor: paper.gorard_sieve_rating.data_quality.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.data_quality.score >= 2 ? '#ff9800' : '#f44336',
+                                color: 'white',
+                                fontWeight: 700
+                              }}
+                              size="small"
+                            />
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                            {paper.gorard_sieve_rating.data_quality.reasoning}
+                          </Typography>
+                        </AccordionDetails>
+                      </Accordion>
+
+                      {/* Fidelity */}
+                      <Accordion sx={{ mb: 1, '&:before': { display: 'none' }, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                        <AccordionSummary 
+                          expandIcon={<ExpandMore />}
+                          sx={{ 
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
+                            borderLeft: `4px solid ${paper.gorard_sieve_rating.fidelity.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.fidelity.score >= 2 ? '#ff9800' : '#f44336'}`
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                            <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
+                              Fidelity (Implementation Fidelity)
+                            </Typography>
+                            <Chip 
+                              label={`${paper.gorard_sieve_rating.fidelity.score}/4`} 
+                              sx={{
+                                backgroundColor: paper.gorard_sieve_rating.fidelity.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.fidelity.score >= 2 ? '#ff9800' : '#f44336',
+                                color: 'white',
+                                fontWeight: 700
+                              }}
+                              size="small"
+                            />
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                            {paper.gorard_sieve_rating.fidelity.reasoning}
+                          </Typography>
+                        </AccordionDetails>
+                      </Accordion>
+
+                      {/* Validity */}
+                      <Accordion sx={{ mb: 1, '&:before': { display: 'none' }, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                        <AccordionSummary 
+                          expandIcon={<ExpandMore />}
+                          sx={{ 
+                            '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' },
+                            borderLeft: `4px solid ${paper.gorard_sieve_rating.validity.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.validity.score >= 2 ? '#ff9800' : '#f44336'}`
+                          }}
+                        >
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', gap: 2 }}>
+                            <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 600 }}>
+                              Validity (Overall Study Validity)
+                            </Typography>
+                            <Chip 
+                              label={`${paper.gorard_sieve_rating.validity.score}/4`} 
+                              sx={{
+                                backgroundColor: paper.gorard_sieve_rating.validity.score >= 3 ? '#4caf50' : paper.gorard_sieve_rating.validity.score >= 2 ? '#ff9800' : '#f44336',
+                                color: 'white',
+                                fontWeight: 700
+                              }}
+                              size="small"
+                            />
+                          </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ backgroundColor: 'rgba(0,0,0,0.01)' }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
+                            {paper.gorard_sieve_rating.validity.reasoning}
+                          </Typography>
+                        </AccordionDetails>
+                      </Accordion>
+
+                      {/* About Gorard Sieve */}
+                      <Box sx={{ mt: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+                        <Typography variant="caption" color="text.secondary">
+                          <strong>About the Gorard Sieve:</strong> The Gorard Sieve is a standardized rubric for evaluating research quality and trustworthiness. 
+                          It assesses studies across six key dimensions using a 0-4 scale. The overall rating reflects the "lowest link" principle - 
+                          a study is only as trustworthy as its weakest component.
+                        </Typography>
+                      </Box>
+                    </>
+                  ) : (
+                    <Box sx={{ textAlign: 'center', py: 3 }}>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        This paper has not been analyzed with the Gorard Sieve yet.
+                      </Typography>
+                      {isOwner && (
+                        <>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                            Click the "Analyze" button above to evaluate this paper's trustworthiness.
+                          </Typography>
+                        </>
+                      )}
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* AI Analysis Section (3rd) */}
               {paper.gemini_analysis && (

@@ -78,6 +78,14 @@ export const papersApi = baseApi.injectEndpoints({
         responseHandler: (response) => response.blob(),
       }),
     }),
+    
+    analyzeGorardSieve: builder.mutation<ApiResponse<{ gorard_sieve_rating: any }>, string>({
+      query: (id) => ({
+        url: `${API_ENDPOINTS.PAPERS.BY_ID(id)}/gorard-sieve`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, id) => [{ type: 'Paper', id }, 'Paper'],
+    }),
   }),
 });
 
@@ -149,6 +157,7 @@ export const {
   useGetRelatedPapersQuery,
   useToggleFavoriteMutation,
   useGetMyFavoritesQuery,
+  useAnalyzeGorardSieveMutation,
 } = papersApi;
 
 export const {

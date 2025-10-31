@@ -138,6 +138,83 @@ const paperSchema = new mongoose.Schema({
       type: Number,
       default: 0.95
     }
+  },
+  // Gorard Sieve Trustworthiness Rating
+  gorard_sieve_rating: {
+    design: {
+      score: {
+        type: Number,
+        min: 0,
+        max: 4
+      },
+      reasoning: {
+        type: String,
+        trim: true
+      }
+    },
+    scale: {
+      score: {
+        type: Number,
+        min: 0,
+        max: 4
+      },
+      reasoning: {
+        type: String,
+        trim: true
+      }
+    },
+    completeness_of_data: {
+      score: {
+        type: Number,
+        min: 0,
+        max: 4
+      },
+      reasoning: {
+        type: String,
+        trim: true
+      }
+    },
+    data_quality: {
+      score: {
+        type: Number,
+        min: 0,
+        max: 4
+      },
+      reasoning: {
+        type: String,
+        trim: true
+      }
+    },
+    fidelity: {
+      score: {
+        type: Number,
+        min: 0,
+        max: 4
+      },
+      reasoning: {
+        type: String,
+        trim: true
+      }
+    },
+    validity: {
+      score: {
+        type: Number,
+        min: 0,
+        max: 4
+      },
+      reasoning: {
+        type: String,
+        trim: true
+      }
+    },
+    overall_rating: {
+      type: Number,
+      min: 0,
+      max: 4
+    },
+    analysis_date: {
+      type: Date
+    }
   }
 }, {
   timestamps: true,

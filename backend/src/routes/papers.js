@@ -14,7 +14,8 @@ const {
   extractMetadataFromUrl,
   getRelatedPapers,
   toggleFavorite,
-  getFavoritePapers
+  getFavoritePapers,
+  analyzeGorardSieve
 } = require('../controllers/paperController');
 
 const router = express.Router();
@@ -76,6 +77,7 @@ router.get('/user/:userId?', auth, getUserPapers);
 router.get('/favorites/me', auth, getFavoritePapers);
 router.post('/:paperId/favorite', auth, toggleFavorite);
 router.get('/:paperId/related', getRelatedPapers);
+router.post('/:paperId/gorard-sieve', auth, analyzeGorardSieve);
 router.get('/:paperId', auth, getPaperById);
 router.put('/:paperId', auth, validatePaperUpdate, updatePaper);
 router.delete('/:paperId', auth, deletePaper);

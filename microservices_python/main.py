@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from config.settings import settings
 from config.logging import get_logger
 # REMOVE: No longer need the content_summarizer
-from services import pdf_metadata_extract, research_analyzer
+from services import pdf_metadata_extract, research_analyzer, gorard_sieve_analyzer
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -34,6 +34,13 @@ app.include_router(
     research_analyzer.router,
     prefix="/research",
     tags=["Research Analysis"]
+)
+
+# Mount the Gorard Sieve analyzer service router
+app.include_router(
+    gorard_sieve_analyzer.router,
+    prefix="/gorard-sieve",
+    tags=["Gorard Sieve Analysis"]
 )
 
 @app.get("/", tags=["Root"])

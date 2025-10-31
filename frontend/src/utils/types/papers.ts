@@ -25,6 +25,22 @@ export interface ProcessingInfo {
   confidence_score?: number;
 }
 
+export interface GorardSieveCategoryScore {
+  score: number;
+  reasoning: string;
+}
+
+export interface GorardSieveRating {
+  design: GorardSieveCategoryScore;
+  scale: GorardSieveCategoryScore;
+  completeness_of_data: GorardSieveCategoryScore;
+  data_quality: GorardSieveCategoryScore;
+  fidelity: GorardSieveCategoryScore;
+  validity: GorardSieveCategoryScore;
+  overall_rating: number;
+  analysis_date?: string;
+}
+
 export interface Paper {
   _id: string;
   title: string;
@@ -45,6 +61,7 @@ export interface Paper {
   downloadCount: number;
   gemini_analysis?: GeminiAnalysis;
   processing_info?: ProcessingInfo;
+  gorard_sieve_rating?: GorardSieveRating;
   createdAt: string;
   updatedAt: string;
   formattedFileSize: string;

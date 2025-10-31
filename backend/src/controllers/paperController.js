@@ -805,6 +805,145 @@ const extractMetadataFromUrl = async (req, res) => {
   }
 };
 
+// Analyze paper with Gorard Sieve
+const analyzeGorardSieve = async (req, res) => {
+  try {
+    const { paperId } = req.params;
+
+    const paper = await Paper.findById(paperId);
+
+    if (!paper) {
+      return res.status(404).json({
+        success: false,
+        error: {
+          code: 'PAPER_NOT_FOUND',
+          message: 'Paper not found'
+        }
+      });
+    }
+
+    // Check if user owns this paper
+    if (paper.uploadedBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        error: {
+          code: 'ACCESS_DENIED',
+          message: 'You can only analyze your own papers'
+        }
+      });
+    }
+
+    logger.info(`Starting Gorard Sieve analysis for paper: ${paperId}`);
+
+    // Get file path for processing
+    let filePathForProcessing = paper.filePath;
+    
+    // If file is in Cloudinary, download it temporarily
+    if (!filePathForProcessing && paper.cloudinary) {
+      const tempDir = process.env.TEMP_DIR || './temp';
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      
+      const tempFileName = `temp-${Date.now()}-${paper.fileName}`;
+      filePathForProcessing = path.join(tempDir, tempFileName);
+      
+      await CloudinaryService.downloadFile(
+        paper.cloudinary.public_id,
+        filePathForProcessing
+      );
+    }
+
+    // Perform Gorard Sieve analysis
+    let analysisResult;
+    try {
+      analysisResult = await microserviceClient.analyzeGorardSieve(filePathForProcessing);
+    } catch (error) {
+      logger.error('Gorard Sieve analysis failed:', error);
+      
+      // Clean up temp file if it was created
+      if (filePathForProcessing && filePathForProcessing !== paper.filePath) {
+        try {
+          fs.unlinkSync(filePathForProcessing);
+        } catch (cleanupError) {
+          logger.warn('Failed to cleanup temp file:', cleanupError);
+        }
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: {
+          code: 'GORARD_ANALYSIS_FAILED',
+          message: 'Failed to analyze paper with Gorard Sieve. Please try again.',
+          details: error.message
+        }
+      });
+    }
+
+    // Clean up temp file if it was created
+    if (filePathForProcessing && filePathForProcessing !== paper.filePath) {
+      try {
+        fs.unlinkSync(filePathForProcessing);
+      } catch (cleanupError) {
+        logger.warn('Failed to cleanup temp file:', cleanupError);
+      }
+    }
+
+    // Update paper with Gorard Sieve results
+    const gorardRating = analysisResult.gorard_sieve_rating;
+    
+    paper.gorard_sieve_rating = {
+      design: {
+        score: gorardRating.design.score,
+        reasoning: gorardRating.design.reasoning
+      },
+      scale: {
+        score: gorardRating.scale.score,
+        reasoning: gorardRating.scale.reasoning
+      },
+      completeness_of_data: {
+        score: gorardRating.completeness_of_data.score,
+        reasoning: gorardRating.completeness_of_data.reasoning
+      },
+      data_quality: {
+        score: gorardRating.data_quality.score,
+        reasoning: gorardRating.data_quality.reasoning
+      },
+      fidelity: {
+        score: gorardRating.fidelity.score,
+        reasoning: gorardRating.fidelity.reasoning
+      },
+      validity: {
+        score: gorardRating.validity.score,
+        reasoning: gorardRating.validity.reasoning
+      },
+      overall_rating: gorardRating.overall_rating,
+      analysis_date: new Date()
+    };
+
+    await paper.save();
+
+    logger.info(`Gorard Sieve analysis completed for paper: ${paperId}. Overall rating: ${gorardRating.overall_rating}/4`);
+
+    res.json({
+      success: true,
+      message: 'Gorard Sieve analysis completed successfully',
+      data: {
+        gorard_sieve_rating: paper.gorard_sieve_rating
+      }
+    });
+  } catch (error) {
+    logger.error('Gorard Sieve analysis error:', error);
+    res.status(500).json({
+      success: false,
+      error: {
+        code: 'ANALYSIS_FAILED',
+        message: 'Failed to analyze paper with Gorard Sieve'
+      }
+    });
+  }
+};
+
 module.exports = {
   uploadPaper,
   getAllPapers,
@@ -817,5 +956,6 @@ module.exports = {
   extractMetadataFromUrl,
   getRelatedPapers,
   toggleFavorite,
-  getFavoritePapers
+  getFavoritePapers,
+  analyzeGorardSieve
 }; 

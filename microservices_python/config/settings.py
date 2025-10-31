@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Gemini AI settings
     GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-2.5-pro"  # Changed from gemini-2.5-flash for higher quality analysis
     GEMINI_TEMPERATURE: float = 0.3
     GEMINI_MAX_TOKENS: int = 15000
 
