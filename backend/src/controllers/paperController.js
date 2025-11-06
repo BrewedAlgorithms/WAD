@@ -9,6 +9,7 @@ const { logger } = require('../utils/logger');
 
 // Upload paper with metadata extraction
 const uploadPaper = async (req, res) => {
+  logger.info(`Upload paper request received for user ID: ${req.user._id}`, { fileInfo: req.fileInfo, body: req.body });
   try {
     const { fileInfo } = req;
     const { metadata } = req.body; // Get metadata from request body
@@ -21,9 +22,9 @@ const uploadPaper = async (req, res) => {
     if (metadata) {
       try {
         parsedMetadata = typeof metadata === 'string' ? JSON.parse(metadata) : metadata;
-        logger.info('Metadata parsed successfully:', parsedMetadata);
+        logger.info('Metadata parsed successfully:', { parsedMetadata });
       } catch (parseError) {
-        logger.error('Failed to parse metadata:', parseError);
+        logger.error('Failed to parse metadata:', { parseError, metadata });
         return res.status(400).json({
           success: false,
           error: {
@@ -35,6 +36,7 @@ const uploadPaper = async (req, res) => {
     }
 
     // Use provided metadata or fallback to basic file info
+    logger.info('Constructing paper metadata');
     const paperMetadata = parsedMetadata || {
       title: fileInfo.originalName.replace('.pdf', ''),
       detailed_summary: '',
@@ -47,6 +49,7 @@ const uploadPaper = async (req, res) => {
     };
 
     // Create paper document
+    logger.info('Creating paper document in database');
     const paperData = {
       title: paperMetadata.title || fileInfo.originalName.replace('.pdf', ''),
       detailed_summary: paperMetadata.detailed_summary || '',
@@ -82,6 +85,7 @@ const uploadPaper = async (req, res) => {
 
     const paper = new Paper(paperData);
     await paper.save();
+    logger.info(`Paper document created with ID: ${paper._id}`);
 
     // Populate user info
     await paper.populate('uploadedBy', 'firstName lastName email');
@@ -96,7 +100,7 @@ const uploadPaper = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Paper upload error:', error);
+    logger.error('Paper upload error:', { error, userId: req.user?._id, fileInfo: req.fileInfo });
     res.status(500).json({
       success: false,
       error: {
@@ -109,9 +113,11 @@ const uploadPaper = async (req, res) => {
 
 // Get related papers by shared keywords/authors/journal
 const getRelatedPapers = async (req, res) => {
+  logger.info(`Get related papers request for paper ID: ${req.params.paperId}`);
   try {
     const { paperId } = req.params;
     if (!mongoose.Types.ObjectId.isValid(paperId)) {
+      logger.warn(`Invalid paper ID provided for related papers: ${paperId}`);
       return res.status(400).json({
         success: false,
         error: { code: 'INVALID_ID', message: 'Invalid paper ID' }
@@ -119,12 +125,14 @@ const getRelatedPapers = async (req, res) => {
     }
     const basePaper = await Paper.findById(paperId);
     if (!basePaper) {
+      logger.warn(`Base paper not found for related papers search: ${paperId}`);
       return res.status(404).json({
         success: false,
         error: { code: 'PAPER_NOT_FOUND', message: 'Paper not found' }
       });
     }
 
+    logger.info(`Building query for related papers to: ${paperId}`);
     const query = {
       _id: { $ne: basePaper._id },
       isPublic: true,
@@ -142,6 +150,7 @@ const getRelatedPapers = async (req, res) => {
     }
 
     if (query.$or.length === 0) {
+      logger.info('No keywords, authors, or journal to relate by. Using title words.');
       query.$or.push({ title: { $regex: basePaper.title.split(' ').slice(0, 3).join('|'), $options: 'i' } });
     }
 
@@ -150,12 +159,13 @@ const getRelatedPapers = async (req, res) => {
       .sort({ downloadCount: -1, createdAt: -1 })
       .populate('uploadedBy', 'firstName lastName');
 
+    logger.info(`Found ${related.length} related papers for paper ID: ${paperId}`);
     res.json({
       success: true,
       data: { papers: related.map(p => p.getPublicData()) }
     });
   } catch (error) {
-    logger.error('Get related papers error:', error);
+    logger.error('Get related papers error:', { error, paperId: req.params.paperId });
     res.status(500).json({
       success: false,
       error: { code: 'RELATED_FAILED', message: 'Failed to get related papers' }
@@ -165,25 +175,30 @@ const getRelatedPapers = async (req, res) => {
 
 // Toggle favorite for current user
 const toggleFavorite = async (req, res) => {
+  logger.info(`Toggle favorite request for paper ID: ${req.params.paperId} by user ID: ${req.user._id}`);
   try {
     const { paperId } = req.params;
     const userId = req.user._id;
     if (!mongoose.Types.ObjectId.isValid(paperId)) {
+      logger.warn(`Invalid paper ID for toggle favorite: ${paperId}`);
       return res.status(400).json({ success: false, error: { code: 'INVALID_ID', message: 'Invalid paper ID' } });
     }
 
     const paper = await Paper.findById(paperId).select('_id isPublic uploadedBy');
     if (!paper) {
+      logger.warn(`Paper not found for toggle favorite: ${paperId}`);
       return res.status(404).json({ success: false, error: { code: 'PAPER_NOT_FOUND', message: 'Paper not found' } });
     }
 
     // Only allow favoriting public papers or own private ones
     if (!paper.isPublic && paper.uploadedBy.toString() !== userId.toString()) {
+      logger.warn(`Access denied to favorite paper: ${paperId} by user: ${userId}`);
       return res.status(403).json({ success: false, error: { code: 'ACCESS_DENIED', message: 'Cannot favorite this paper' } });
     }
 
     const user = await User.findById(userId).select('favorites');
     const already = user.favorites?.some(id => id.toString() === paperId);
+    logger.info(`Paper ${paperId} is currently ${already ? 'favorited' : 'not favorited'} by user ${userId}. Toggling.`);
 
     let updated;
     if (already) {
@@ -192,18 +207,20 @@ const toggleFavorite = async (req, res) => {
       updated = await User.findByIdAndUpdate(userId, { $addToSet: { favorites: paperId } }, { new: true }).select('favorites');
     }
 
+    logger.info(`Favorite status updated for paper ${paperId} by user ${userId}. New favorite status: ${!already}`);
     res.json({
       success: true,
       data: { favorited: !already, favoritesCount: updated.favorites.length }
     });
   } catch (error) {
-    logger.error('Toggle favorite error:', error);
+    logger.error('Toggle favorite error:', { error, paperId: req.params.paperId, userId: req.user._id });
     res.status(500).json({ success: false, error: { code: 'FAVORITE_FAILED', message: 'Failed to update favorites' } });
   }
 };
 
 // Get current user's favorite papers
 const getFavoritePapers = async (req, res) => {
+  logger.info(`Get favorite papers request for user ID: ${req.user._id}`);
   try {
     const userId = req.user._id;
     const user = await User.findById(userId).populate({
@@ -214,15 +231,17 @@ const getFavoritePapers = async (req, res) => {
     });
 
     const papers = (user.favorites || []).map((p) => p.getPublicData());
+    logger.info(`Found ${papers.length} favorite papers for user ID: ${userId}`);
     res.json({ success: true, data: { papers } });
   } catch (error) {
-    logger.error('Get favorites error:', error);
+    logger.error('Get favorites error:', { error, userId: req.user._id });
     res.status(500).json({ success: false, error: { code: 'FAVORITES_FAILED', message: 'Failed to fetch favorites' } });
   }
 };
 
 // Get all papers with pagination
 const getAllPapers = async (req, res) => {
+  logger.info('Get all papers request', { query: req.query });
   try {
     const {
       page = 1,
@@ -237,6 +256,7 @@ const getAllPapers = async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     // Build query
+    logger.info('Building query for all papers');
     const query = { isPublic: true };
     if (uploadedBy) {
       query.uploadedBy = uploadedBy;
@@ -245,6 +265,7 @@ const getAllPapers = async (req, res) => {
     // Build sort options
     const sortOptions = {};
     sortOptions[sort] = order === 'desc' ? -1 : 1;
+    logger.info('Executing query for all papers with pagination', { query, sortOptions, limit: limitNum, skip });
 
     // Execute query
     const papers = await Paper.find(query)
@@ -256,6 +277,7 @@ const getAllPapers = async (req, res) => {
     // Get total count
     const totalItems = await Paper.countDocuments(query);
     const totalPages = Math.ceil(totalItems / limitNum);
+    logger.info(`Found ${papers.length} papers out of ${totalItems} total.`);
 
     res.json({
       success: true,
@@ -271,7 +293,7 @@ const getAllPapers = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Get papers error:', error);
+    logger.error('Get papers error:', { error, query: req.query });
     res.status(500).json({
       success: false,
       error: {
@@ -284,6 +306,7 @@ const getAllPapers = async (req, res) => {
 
 // Get paper by ID
 const getPaperById = async (req, res) => {
+  logger.info(`Get paper by ID request for paper ID: ${req.params.paperId}`);
   try {
     const { paperId } = req.params;
 
@@ -291,6 +314,7 @@ const getPaperById = async (req, res) => {
       .populate('uploadedBy', 'firstName lastName email');
 
     if (!paper) {
+      logger.warn(`Paper not found by ID: ${paperId}`);
       return res.status(404).json({
         success: false,
         error: {
@@ -301,7 +325,9 @@ const getPaperById = async (req, res) => {
     }
 
     // Check if user can access this paper
+    logger.info(`Checking access for paper ID: ${paperId} for user ID: ${req.user._id}`);
     if (!paper.isPublic && paper.uploadedBy._id.toString() !== req.user._id.toString()) {
+      logger.warn(`Access denied for paper ID: ${paperId} for user ID: ${req.user._id}`);
       return res.status(403).json({
         success: false,
         error: {
@@ -311,6 +337,7 @@ const getPaperById = async (req, res) => {
       });
     }
 
+    logger.info(`Paper retrieved successfully: ${paperId}`);
     res.json({
       success: true,
       data: {
@@ -318,7 +345,7 @@ const getPaperById = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Get paper error:', error);
+    logger.error('Get paper error:', { error, paperId: req.params.paperId });
     res.status(500).json({
       success: false,
       error: {
@@ -331,6 +358,7 @@ const getPaperById = async (req, res) => {
 
 // Update paper metadata
 const updatePaper = async (req, res) => {
+  logger.info(`Update paper request for paper ID: ${req.params.paperId} by user ID: ${req.user._id}`, { body: req.body });
   try {
     const { paperId } = req.params;
     const updateData = req.body;
@@ -338,6 +366,7 @@ const updatePaper = async (req, res) => {
     const paper = await Paper.findById(paperId);
 
     if (!paper) {
+      logger.warn(`Paper not found for update: ${paperId}`);
       return res.status(404).json({
         success: false,
         error: {
@@ -348,7 +377,9 @@ const updatePaper = async (req, res) => {
     }
 
     // Check if user owns this paper
+    logger.info(`Checking ownership for paper ID: ${paperId} by user ID: ${req.user._id}`);
     if (paper.uploadedBy.toString() !== req.user._id.toString()) {
+      logger.warn(`Access denied to update paper ID: ${paperId} by user ID: ${req.user._id}`);
       return res.status(403).json({
         success: false,
         error: {
@@ -359,6 +390,7 @@ const updatePaper = async (req, res) => {
     }
 
     // Update paper
+    logger.info(`Updating paper ID: ${paperId}`);
     const updatedPaper = await Paper.findByIdAndUpdate(
       paperId,
       updateData,
@@ -375,7 +407,7 @@ const updatePaper = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Update paper error:', error);
+    logger.error('Update paper error:', { error, paperId: req.params.paperId, body: req.body, userId: req.user._id });
     res.status(500).json({
       success: false,
       error: {
@@ -388,12 +420,14 @@ const updatePaper = async (req, res) => {
 
 // Delete paper
 const deletePaper = async (req, res) => {
+  logger.info(`Delete paper request for paper ID: ${req.params.paperId} by user ID: ${req.user._id}`);
   try {
     const { paperId } = req.params;
 
     const paper = await Paper.findById(paperId);
 
     if (!paper) {
+      logger.warn(`Paper not found for deletion: ${paperId}`);
       return res.status(404).json({
         success: false,
         error: {
@@ -404,7 +438,9 @@ const deletePaper = async (req, res) => {
     }
 
     // Check if user owns this paper
+    logger.info(`Checking ownership for deletion of paper ID: ${paperId} by user ID: ${req.user._id}`);
     if (paper.uploadedBy.toString() !== req.user._id.toString()) {
+      logger.warn(`Access denied for deletion of paper ID: ${paperId} by user ID: ${req.user._id}`);
       return res.status(403).json({
         success: false,
         error: {
@@ -415,19 +451,23 @@ const deletePaper = async (req, res) => {
     }
 
     // Delete file from storage
+    logger.info(`Deleting associated file for paper ID: ${paperId}`);
     try {
       if (paper.cloudinary && paper.cloudinary.public_id) {
         // Delete from Cloudinary
+        logger.info(`Deleting from Cloudinary: ${paper.cloudinary.public_id}`);
         await CloudinaryService.deleteFile(paper.cloudinary.public_id);
       } else if (paper.filePath && fs.existsSync(paper.filePath)) {
         // Delete local file
+        logger.info(`Deleting local file: ${paper.filePath}`);
         fs.unlinkSync(paper.filePath);
       }
     } catch (fileError) {
-      logger.warn('Failed to delete file:', fileError);
+      logger.warn('Failed to delete file:', { fileError, paperId });
     }
 
     // Delete from database
+    logger.info(`Deleting paper document from database: ${paperId}`);
     await Paper.findByIdAndDelete(paperId);
 
     logger.info(`Paper deleted: ${paperId} by user: ${req.user._id}`);
@@ -437,7 +477,7 @@ const deletePaper = async (req, res) => {
       message: 'Paper deleted successfully'
     });
   } catch (error) {
-    logger.error('Delete paper error:', error);
+    logger.error('Delete paper error:', { error, paperId: req.params.paperId, userId: req.user._id });
     res.status(500).json({
       success: false,
       error: {
@@ -450,12 +490,14 @@ const deletePaper = async (req, res) => {
 
 // Download paper
 const downloadPaper = async (req, res) => {
+  logger.info(`Download paper request for paper ID: ${req.params.paperId}`);
   try {
     const { paperId } = req.params;
 
     const paper = await Paper.findById(paperId);
 
     if (!paper) {
+      logger.warn(`Paper not found for download: ${paperId}`);
       return res.status(404).json({
         success: false,
         error: {
@@ -466,6 +508,7 @@ const downloadPaper = async (req, res) => {
     }
 
     // Increment download count
+    logger.info(`Incrementing download count for paper: ${paperId}`);
     await paper.incrementDownloadCount();
 
     if (paper.cloudinary && paper.cloudinary.secure_url) {
@@ -474,6 +517,7 @@ const downloadPaper = async (req, res) => {
       res.redirect(paper.cloudinary.secure_url);
     } else if (paper.filePath && fs.existsSync(paper.filePath)) {
       // Stream local file
+      logger.info(`Streaming local file for paper: ${paperId}`);
       res.setHeader('Content-Type', paper.mimeType);
       res.setHeader('Content-Disposition', `attachment; filename="${paper.fileName}"`);
       res.setHeader('Content-Length', paper.fileSize);
@@ -481,6 +525,7 @@ const downloadPaper = async (req, res) => {
       const fileStream = fs.createReadStream(paper.filePath);
       fileStream.pipe(res);
     } else {
+      logger.warn(`File not found for paper: ${paperId}`);
       return res.status(404).json({
         success: false,
         error: {
@@ -492,7 +537,7 @@ const downloadPaper = async (req, res) => {
 
     logger.info(`Paper downloaded: ${paperId} by user: ${req.user._id}`);
   } catch (error) {
-    logger.error('Download paper error:', error);
+    logger.error('Download paper error:', { error, paperId: req.params.paperId, userId: req.user?._id });
     res.status(500).json({
       success: false,
       error: {
@@ -505,6 +550,7 @@ const downloadPaper = async (req, res) => {
 
 // Get user's papers
 const getUserPapers = async (req, res) => {
+  logger.info(`Get user papers request for user ID: ${req.params.userId || req.user._id}`, { query: req.query });
   try {
     const userId = req.params.userId || req.user._id;
     const { page = 1, limit = 10 } = req.query;
@@ -513,6 +559,7 @@ const getUserPapers = async (req, res) => {
     const limitNum = Math.min(parseInt(limit), 50);
     const skip = (pageNum - 1) * limitNum;
 
+    logger.info(`Querying papers for user ID: ${userId}`, { limit: limitNum, skip });
     const papers = await Paper.findByUser(userId, { isPublic: true })
       .sort({ uploadedAt: -1 })
       .skip(skip)
@@ -523,6 +570,7 @@ const getUserPapers = async (req, res) => {
       isPublic: true 
     });
     const totalPages = Math.ceil(totalItems / limitNum);
+    logger.info(`Found ${papers.length} papers for user ID: ${userId} out of ${totalItems} total.`);
 
     res.json({
       success: true,
@@ -538,7 +586,7 @@ const getUserPapers = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Get user papers error:', error);
+    logger.error('Get user papers error:', { error, userId: req.params.userId || req.user._id, query: req.query });
     res.status(500).json({
       success: false,
       error: {
@@ -551,6 +599,7 @@ const getUserPapers = async (req, res) => {
 
 // Extract metadata from AI (separate endpoint)
 const extractMetadataFromAI = async (req, res) => {
+  logger.info(`Extract metadata from AI request received`, { fileInfo: req.fileInfo });
   try {
     const { fileInfo } = req;
 
@@ -565,6 +614,7 @@ const extractMetadataFromAI = async (req, res) => {
       let filePathForProcessing = fileInfo.path;
       
       if (!filePathForProcessing && fileInfo.cloudinary) {
+        logger.info(`File is on Cloudinary, downloading temporarily for processing: ${fileInfo.cloudinary.public_id}`);
         // Download from Cloudinary to temp location for processing
         const tempDir = process.env.TEMP_DIR || './temp';
         if (!fs.existsSync(tempDir)) {
@@ -574,26 +624,30 @@ const extractMetadataFromAI = async (req, res) => {
         const tempFileName = `temp-${Date.now()}-${fileInfo.originalName}`;
         filePathForProcessing = path.join(tempDir, tempFileName);
         
+        logger.info(`Downloading to temp path: ${filePathForProcessing}`);
         await CloudinaryService.downloadFile(
           fileInfo.cloudinary.public_id,
           filePathForProcessing
         );
       }
 
+      logger.info(`Calling metadata extraction microservice for file: ${filePathForProcessing}`);
       const metadataResponse = await microserviceClient.extractMetadata(filePathForProcessing, true);
       metadata = metadataResponse.metadata;
       processingInfo = metadataResponse.processing_info;
+      logger.info('Metadata extraction microservice call successful.');
 
       // Clean up temp file if it was created
       if (filePathForProcessing && filePathForProcessing !== fileInfo.path) {
         try {
+          logger.info(`Cleaning up temporary file: ${filePathForProcessing}`);
           fs.unlinkSync(filePathForProcessing);
         } catch (cleanupError) {
           logger.warn('Failed to cleanup temp file:', cleanupError);
         }
       }
     } catch (error) {
-      logger.error('Metadata extraction failed:', error);
+      logger.error('Metadata extraction microservice failed:', { error, fileInfo });
       return res.status(500).json({
         success: false,
         error: {
@@ -635,7 +689,7 @@ const extractMetadataFromAI = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Metadata extraction error:', error);
+    logger.error('Metadata extraction error:', { error, fileInfo: req.fileInfo });
     res.status(500).json({
       success: false,
       error: {
@@ -648,10 +702,12 @@ const extractMetadataFromAI = async (req, res) => {
 
 // Extract metadata from URL
 const extractMetadataFromUrl = async (req, res) => {
+  logger.info('Extract metadata from URL request received', { body: req.body });
   try {
     const { url } = req.body;
     
     if (!url) {
+      logger.warn('No URL provided in extract metadata from URL request');
       return res.status(400).json({
         success: false,
         error: {
@@ -671,6 +727,7 @@ const extractMetadataFromUrl = async (req, res) => {
     // Validate URL
     const validatePdfUrl = async (url) => {
       try {
+        logger.info(`Validating PDF URL: ${url}`);
         const response = await axios.head(url, {
           timeout: 10000,
           maxRedirects: 5,
@@ -679,6 +736,7 @@ const extractMetadataFromUrl = async (req, res) => {
         
         const contentType = response.headers['content-type'];
         const contentLength = response.headers['content-length'];
+        logger.info('URL validation headers:', { contentType, contentLength });
         
         if (!contentType || !contentType.includes('application/pdf')) {
           throw new Error('URL does not point to a PDF file');
@@ -689,8 +747,10 @@ const extractMetadataFromUrl = async (req, res) => {
           throw new Error(`PDF file size exceeds ${maxSize / (1024 * 1024)}MB limit`);
         }
         
+        logger.info('PDF URL validation successful');
         return true;
       } catch (error) {
+        logger.error('PDF URL validation failed', { error, url });
         throw new Error('Invalid PDF URL or unable to access the file');
       }
     };
@@ -698,6 +758,7 @@ const extractMetadataFromUrl = async (req, res) => {
     // Download PDF from URL
     const downloadPdfFromUrl = async (url) => {
       try {
+        logger.info(`Downloading PDF from URL: ${url}`);
         const response = await axios.get(url, {
           responseType: 'arraybuffer',
           timeout: 30000,
@@ -706,6 +767,7 @@ const extractMetadataFromUrl = async (req, res) => {
         });
         
         const buffer = Buffer.from(response.data);
+        logger.info(`Downloaded ${buffer.length} bytes from ${url}`);
         const tempDir = process.env.TEMP_DIR || './temp';
         if (!fs.existsSync(tempDir)) {
           fs.mkdirSync(tempDir, { recursive: true });
@@ -715,6 +777,7 @@ const extractMetadataFromUrl = async (req, res) => {
         const filePath = path.join(tempDir, filename);
         
         fs.writeFileSync(filePath, buffer);
+        logger.info(`PDF saved to temporary file: ${filePath}`);
         
         return {
           buffer,
@@ -724,6 +787,7 @@ const extractMetadataFromUrl = async (req, res) => {
           mimetype: 'application/pdf'
         };
       } catch (error) {
+        logger.error('Failed to download PDF from URL', { error, url });
         throw new Error('Failed to download PDF from URL');
       }
     };
@@ -739,18 +803,21 @@ const extractMetadataFromUrl = async (req, res) => {
     let processingInfo;
     
     try {
+      logger.info(`Calling metadata extraction microservice for downloaded file: ${downloadedFile.filePath}`);
       const metadataResponse = await microserviceClient.extractMetadata(downloadedFile.filePath, true);
       metadata = metadataResponse.metadata;
       processingInfo = metadataResponse.processing_info;
+      logger.info('Metadata extraction from downloaded file successful.');
 
       // Clean up temp file
       try {
+        logger.info(`Cleaning up temporary downloaded file: ${downloadedFile.filePath}`);
         fs.unlinkSync(downloadedFile.filePath);
       } catch (cleanupError) {
         logger.warn('Failed to cleanup temp file:', cleanupError);
       }
     } catch (error) {
-      logger.error('Metadata extraction failed:', error);
+      logger.error('Metadata extraction failed for URL-downloaded file', { error, url, downloadedFile });
       return res.status(500).json({
         success: false,
         error: {
@@ -794,7 +861,7 @@ const extractMetadataFromUrl = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('URL-based metadata extraction error:', error);
+    logger.error('URL-based metadata extraction error:', { error, url: req.body.url });
     res.status(500).json({
       success: false,
       error: {
@@ -807,12 +874,14 @@ const extractMetadataFromUrl = async (req, res) => {
 
 // Analyze paper with Gorard Sieve
 const analyzeGorardSieve = async (req, res) => {
+  logger.info(`Gorard Sieve analysis request for paper ID: ${req.params.paperId} by user ID: ${req.user._id}`);
   try {
     const { paperId } = req.params;
 
     const paper = await Paper.findById(paperId);
 
     if (!paper) {
+      logger.warn(`Paper not found for Gorard Sieve analysis: ${paperId}`);
       return res.status(404).json({
         success: false,
         error: {
@@ -823,7 +892,9 @@ const analyzeGorardSieve = async (req, res) => {
     }
 
     // Check if user owns this paper
+    logger.info(`Checking ownership for Gorard Sieve analysis of paper ID: ${paperId} by user ID: ${req.user._id}`);
     if (paper.uploadedBy.toString() !== req.user._id.toString()) {
+      logger.warn(`Access denied for Gorard Sieve analysis of paper ID: ${paperId} by user ID: ${req.user._id}`);
       return res.status(403).json({
         success: false,
         error: {
@@ -840,6 +911,7 @@ const analyzeGorardSieve = async (req, res) => {
     
     // If file is in Cloudinary, download it temporarily
     if (!filePathForProcessing && paper.cloudinary) {
+      logger.info(`File for Gorard Sieve analysis is on Cloudinary, downloading temporarily: ${paper.cloudinary.public_id}`);
       const tempDir = process.env.TEMP_DIR || './temp';
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
@@ -848,6 +920,7 @@ const analyzeGorardSieve = async (req, res) => {
       const tempFileName = `temp-${Date.now()}-${paper.fileName}`;
       filePathForProcessing = path.join(tempDir, tempFileName);
       
+      logger.info(`Downloading to temp path for analysis: ${filePathForProcessing}`);
       await CloudinaryService.downloadFile(
         paper.cloudinary.public_id,
         filePathForProcessing
@@ -856,6 +929,7 @@ const analyzeGorardSieve = async (req, res) => {
 
     // Validate that a file path exists for processing
     if (!filePathForProcessing) {
+      logger.error(`File path not available for Gorard Sieve analysis of paper: ${paperId}`);
       return res.status(400).json({
         success: false,
         error: {
@@ -868,13 +942,16 @@ const analyzeGorardSieve = async (req, res) => {
     // Perform Gorard Sieve analysis
     let analysisResult;
     try {
+      logger.info(`Calling Gorard Sieve analysis microservice for file: ${filePathForProcessing}`);
       analysisResult = await microserviceClient.analyzeGorardSieve(filePathForProcessing);
+      logger.info('Gorard Sieve analysis microservice call successful');
     } catch (error) {
-      logger.error('Gorard Sieve analysis failed:', error);
+      logger.error('Gorard Sieve analysis microservice failed:', { error, paperId });
       
       // Clean up temp file if it was created
       if (filePathForProcessing && filePathForProcessing !== paper.filePath) {
         try {
+          logger.info(`Cleaning up temporary file after failed analysis: ${filePathForProcessing}`);
           fs.unlinkSync(filePathForProcessing);
         } catch (cleanupError) {
           logger.warn('Failed to cleanup temp file:', cleanupError);
@@ -894,6 +971,7 @@ const analyzeGorardSieve = async (req, res) => {
     // Clean up temp file if it was created
     if (filePathForProcessing && filePathForProcessing !== paper.filePath) {
       try {
+        logger.info(`Cleaning up temporary file after successful analysis: ${filePathForProcessing}`);
         fs.unlinkSync(filePathForProcessing);
       } catch (cleanupError) {
         logger.warn('Failed to cleanup temp file:', cleanupError);
@@ -901,6 +979,7 @@ const analyzeGorardSieve = async (req, res) => {
     }
 
     // Update paper with Gorard Sieve results
+    logger.info(`Updating paper ${paperId} with Gorard Sieve results`);
     const gorardRating = analysisResult.gorard_sieve_rating;
     
     paper.gorard_sieve_rating = {
@@ -933,6 +1012,7 @@ const analyzeGorardSieve = async (req, res) => {
     };
 
     await paper.save();
+    logger.info(`Paper ${paperId} saved with new Gorard Sieve rating.`);
 
     logger.info(`Gorard Sieve analysis completed for paper: ${paperId}. Overall rating: ${gorardRating.overall_rating}/4`);
 
@@ -944,7 +1024,7 @@ const analyzeGorardSieve = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Gorard Sieve analysis error:', error);
+    logger.error('Gorard Sieve analysis error:', { error, paperId: req.params.paperId, userId: req.user._id });
     res.status(500).json({
       success: false,
       error: {

@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     
     # Logging level for the application
     LOG_LEVEL: str = "INFO" 
+    LOG_FILE_MAX_SIZE: int = 5 * 1024 * 1024  # 5 MB
+    LOG_FILE_BACKUP_COUNT: int = 5
 
     # File validation
     SUPPORTED_FORMATS: List[str] = ["pdf"]

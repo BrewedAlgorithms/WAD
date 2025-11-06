@@ -4,6 +4,7 @@ const { logger } = require('../utils/logger');
 
 // Basic search
 const searchPapers = async (req, res) => {
+  logger.info('Basic search request received', { query: req.query });
   try {
     const {
       q = '',
@@ -21,6 +22,7 @@ const searchPapers = async (req, res) => {
     const startTime = Date.now();
 
     // Build search query
+    logger.info('Building basic search query', { query: q, filters: req.query });
     const searchOptions = {
       sortBy: sort === 'relevance' ? null : sort,
       sortOrder: order
@@ -41,18 +43,22 @@ const searchPapers = async (req, res) => {
     }
 
     // Execute search
+    logger.info('Executing basic search');
     const papers = await Paper.searchPapers(q, searchOptions);
     const totalItems = papers.length;
+    logger.info(`Basic search found ${totalItems} total items`);
 
     // Apply pagination
     const paginatedPapers = papers.slice(skip, skip + limitNum);
     const totalPages = Math.ceil(totalItems / limitNum);
 
     const searchTime = Date.now() - startTime;
+    logger.info(`Basic search took ${searchTime}ms`);
 
     // Record search query to history (if query provided)
     try {
       if (q && q.trim()) {
+        logger.info(`Recording search history for query: "${q}"`);
         await SearchQuery.record(req.user?._id, q);
       }
     } catch (historyErr) {
@@ -78,7 +84,7 @@ const searchPapers = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Search error:', error);
+    logger.error('Search error:', { error, query: req.query });
     res.status(500).json({
       success: false,
       error: {
@@ -91,6 +97,7 @@ const searchPapers = async (req, res) => {
 
 // Advanced search
 const advancedSearch = async (req, res) => {
+  logger.info('Advanced search request received', { body: req.body });
   try {
     const {
       query = '',
@@ -107,6 +114,7 @@ const advancedSearch = async (req, res) => {
     const startTime = Date.now();
 
     // Build search options
+    logger.info('Building advanced search query', { query, filters, sortBy });
     const searchOptions = {
       sortBy: sortBy === 'relevance' ? null : sortBy,
       sortOrder: 'desc'
@@ -130,18 +138,22 @@ const advancedSearch = async (req, res) => {
     }
 
     // Execute search
+    logger.info('Executing advanced search');
     const papers = await Paper.searchPapers(query, searchOptions);
     const totalItems = papers.length;
+    logger.info(`Advanced search found ${totalItems} total items`);
 
     // Apply pagination
     const paginatedPapers = papers.slice(skip, skip + limitNum);
     const totalPages = Math.ceil(totalItems / limitNum);
 
     const searchTime = Date.now() - startTime;
+    logger.info(`Advanced search took ${searchTime}ms`);
 
     // Record search query to history (if query provided)
     try {
       if (query && query.trim()) {
+        logger.info(`Recording advanced search history for query: "${query}"`);
         await SearchQuery.record(req.user?._id, query);
       }
     } catch (historyErr) {
@@ -168,7 +180,7 @@ const advancedSearch = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Advanced search error:', error);
+    logger.error('Advanced search error:', { error, body: req.body });
     res.status(500).json({
       success: false,
       error: {
@@ -181,10 +193,12 @@ const advancedSearch = async (req, res) => {
 
 // Get search suggestions (autocomplete with history + community)
 const getSearchSuggestions = async (req, res) => {
+  logger.info(`Get search suggestions request for query: "${req.query.q}"`);
   try {
     const { q = '' } = req.query;
 
     if (!q || q.length < 2) {
+      logger.info('Query too short for suggestions, returning empty array.');
       return res.json({
         success: true,
         data: {
@@ -194,9 +208,11 @@ const getSearchSuggestions = async (req, res) => {
     }
 
     const searchText = q.trim().toLowerCase();
+    logger.info(`Searching for suggestions with normalized text: "${searchText}"`);
 
     // 1) Personal history suggestions (prefix match), most recent first
     const userId = req.user?._id || null;
+    logger.info(`Fetching personal history suggestions for user: ${userId}`);
     const personalHistory = await SearchQuery.find({
       userId,
       normalized: { $regex: `^${searchText}` },
@@ -204,8 +220,10 @@ const getSearchSuggestions = async (req, res) => {
       .sort({ lastUsedAt: -1 })
       .limit(5)
       .select('query');
+    logger.info(`Found ${personalHistory.length} personal history suggestions.`);
 
     // 2) Community suggestions from Paper titles/keywords
+    logger.info('Fetching community suggestions from paper titles and keywords.');
     const titleSuggestions = await Paper.distinct('title', {
       title: { $regex: searchText, $options: 'i' },
       isPublic: true,
@@ -215,8 +233,10 @@ const getSearchSuggestions = async (req, res) => {
       keywords: { $regex: searchText, $options: 'i' },
       isPublic: true,
     });
+    logger.info(`Found ${titleSuggestions.length} title suggestions and ${keywordSuggestions.length} keyword suggestions.`);
 
     // 3) Global popular queries (other users), prefix match, sorted by frequency
+    logger.info('Fetching global popular queries.');
     const globalHistory = await SearchQuery.find({
       userId: null,
       normalized: { $regex: `^${searchText}` },
@@ -224,6 +244,7 @@ const getSearchSuggestions = async (req, res) => {
       .sort({ count: -1, lastUsedAt: -1 })
       .limit(10)
       .select('query');
+    logger.info(`Found ${globalHistory.length} global history suggestions.`);
 
     // Combine with simple scoring: prefer personal history, then global, then paper-derived
     const combined = [
@@ -243,6 +264,7 @@ const getSearchSuggestions = async (req, res) => {
       unique.push(item);
       if (unique.length >= 10) break;
     }
+    logger.info(`Returning ${unique.length} unique suggestions.`);
 
     res.json({
       success: true,
@@ -251,7 +273,7 @@ const getSearchSuggestions = async (req, res) => {
       },
     });
   } catch (error) {
-    logger.error('Search suggestions error:', error);
+    logger.error('Search suggestions error:', { error, query: req.query.q });
     res.status(500).json({
       success: false,
       error: {
@@ -264,10 +286,12 @@ const getSearchSuggestions = async (req, res) => {
 
 // Get popular keywords
 const getPopularKeywords = async (req, res) => {
+  logger.info('Get popular keywords request', { query: req.query });
   try {
     const { limit = 20 } = req.query;
 
     // Aggregate to get keyword frequency
+    logger.info(`Aggregating popular keywords with a limit of ${limit}`);
     const keywordStats = await Paper.aggregate([
       { $match: { isPublic: true } },
       { $unwind: '$keywords' },
@@ -288,6 +312,7 @@ const getPopularKeywords = async (req, res) => {
       }
     ]);
 
+    logger.info(`Found ${keywordStats.length} popular keywords.`);
     res.json({
       success: true,
       data: {
@@ -295,7 +320,7 @@ const getPopularKeywords = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Popular keywords error:', error);
+    logger.error('Popular keywords error:', { error, query: req.query });
     res.status(500).json({
       success: false,
       error: {
@@ -308,9 +333,11 @@ const getPopularKeywords = async (req, res) => {
 
 // Get available authors
 const getAvailableAuthors = async (req, res) => {
+  logger.info('Get available authors request', { query: req.query });
   try {
     const { limit = 50 } = req.query;
 
+    logger.info(`Aggregating available authors with a limit of ${limit}`);
     const authors = await Paper.aggregate([
       { $match: { isPublic: true } },
       { $unwind: '$authors' },
@@ -332,6 +359,7 @@ const getAvailableAuthors = async (req, res) => {
       }
     ]);
 
+    logger.info(`Found ${authors.length} available authors.`);
     res.json({
       success: true,
       data: {
@@ -339,7 +367,7 @@ const getAvailableAuthors = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Available authors error:', error);
+    logger.error('Available authors error:', { error, query: req.query });
     res.status(500).json({
       success: false,
       error: {
@@ -352,9 +380,11 @@ const getAvailableAuthors = async (req, res) => {
 
 // Get available journals
 const getAvailableJournals = async (req, res) => {
+  logger.info('Get available journals request', { query: req.query });
   try {
     const { limit = 50 } = req.query;
 
+    logger.info(`Aggregating available journals with a limit of ${limit}`);
     const journals = await Paper.aggregate([
       { $match: { isPublic: true, journalName: { $exists: true, $ne: null, $ne: '' } } },
       {
@@ -374,6 +404,7 @@ const getAvailableJournals = async (req, res) => {
       }
     ]);
 
+    logger.info(`Found ${journals.length} available journals.`);
     res.json({
       success: true,
       data: {
@@ -381,7 +412,7 @@ const getAvailableJournals = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Available journals error:', error);
+    logger.error('Available journals error:', { error, query: req.query });
     res.status(500).json({
       success: false,
       error: {
@@ -394,8 +425,10 @@ const getAvailableJournals = async (req, res) => {
 
 // Get search statistics
 const getSearchStats = async (req, res) => {
+  logger.info('Get search stats request');
   try {
     const totalPapers = await Paper.countDocuments({ isPublic: true });
+    logger.info(`Total public papers: ${totalPapers}`);
     const totalKeywords = await Paper.aggregate([
       { $match: { isPublic: true } },
       { $unwind: '$keywords' },
@@ -414,6 +447,7 @@ const getSearchStats = async (req, res) => {
       { $sort: { count: -1 } },
       { $limit: 10 }
     ]);
+    logger.info(`Aggregated stats for ${totalKeywords[0]?.count || 0} unique keywords and top ${journalStats.length} journals.`);
 
     res.json({
       success: true,

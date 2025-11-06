@@ -1,10 +1,12 @@
 # microservices_python/main.py
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+import time
 
 from config.settings import settings
-from config.logging import get_logger
+from config.logging import get_logger, logger as root_logger
 # REMOVE: No longer need the content_summarizer
 from services import pdf_metadata_extract, research_analyzer, gorard_sieve_analyzer
 
@@ -17,6 +19,51 @@ app = FastAPI(
     description="A unified API for AI-powered research assistance, including PDF metadata extraction, summarization, and analysis.",
     version="1.1.0" # Version bump to reflect changes
 )
+
+@app.middleware("http")
+async def logging_middleware(request: Request, call_next):
+    """Middleware to log requests and responses."""
+    start_time = time.time()
+    
+    # Log request details
+    logger.info(
+        f"Request: {request.method} {request.url.path}",
+        extra={
+            "client_host": request.client.host if request.client else "unknown",
+            "client_port": request.client.port if request.client else "unknown",
+        },
+    )
+    
+    try:
+        response = await call_next(request)
+        process_time = time.time() - start_time
+        
+        # Add process time header
+        response.headers["X-Process-Time"] = str(round(process_time * 1000, 2))
+        
+        # Log response details
+        logger.info(
+            f"Response: {request.method} {request.url.path} - Status: {response.status_code}",
+            extra={
+                "status_code": response.status_code,
+                "process_time_ms": round(process_time * 1000, 2),
+            },
+        )
+        
+        return response
+    except Exception as e:
+        process_time = time.time() - start_time
+        root_logger.exception(
+            f"An unhandled exception occurred during the request: {request.method} {request.url.path}",
+            extra={
+                "error": str(e),
+                "process_time_ms": round(process_time * 1000, 2),
+            },
+        )
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": {"code": "UNHANDLED_EXCEPTION", "message": "An internal server error occurred."}}
+        )
 
 # --- Mount the routers from each service ---
 

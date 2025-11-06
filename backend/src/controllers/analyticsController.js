@@ -5,9 +5,11 @@ const { logger } = require('../utils/logger');
 
 // Get upload statistics
 const getUploadStats = async (req, res) => {
+  logger.info('Get upload stats request received.');
   try {
     const totalPapers = await Paper.countDocuments();
     const totalUsers = await User.countDocuments();
+    logger.info(`Total papers: ${totalPapers}, Total users: ${totalUsers}`);
     
     // Papers uploaded this month
     const startOfMonth = new Date();
@@ -17,8 +19,10 @@ const getUploadStats = async (req, res) => {
     const papersThisMonth = await Paper.countDocuments({
       uploadedAt: { $gte: startOfMonth }
     });
+    logger.info(`Papers uploaded this month: ${papersThisMonth}`);
 
     // Top keywords
+    logger.info('Aggregating top keywords.');
     const topKeywords = await Paper.aggregate([
       { $unwind: '$keywords' },
       {
@@ -39,6 +43,7 @@ const getUploadStats = async (req, res) => {
     ]);
 
     // Top journals
+    logger.info('Aggregating top journals.');
     const topJournals = await Paper.aggregate([
       { $match: { journalName: { $exists: true, $ne: '' } } },
       {
@@ -59,6 +64,7 @@ const getUploadStats = async (req, res) => {
     ]);
 
     // Upload trend (last 6 months)
+    logger.info('Aggregating upload trend for the last 6 months.');
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     
@@ -89,6 +95,7 @@ const getUploadStats = async (req, res) => {
       }
     ]);
 
+    logger.info(`Successfully retrieved upload stats. Found ${topKeywords.length} top keywords, ${topJournals.length} top journals, and ${uploadTrend.length} months of trend data.`);
     res.json({
       success: true,
       data: {
@@ -114,13 +121,16 @@ const getUploadStats = async (req, res) => {
 
 // Get user statistics
 const getUserStats = async (req, res) => {
+  logger.info(`Get user stats request received for user ID: ${req.params.userId || req.user._id}`);
   try {
     const { userId } = req.params;
     const targetUserId = userId || req.user._id;
 
     // Get user info
+    logger.info(`Fetching user info for ID: ${targetUserId}`);
     const user = await User.findById(targetUserId).select('firstName lastName email');
     if (!user) {
+      logger.warn(`User not found for stats: ${targetUserId}`);
       return res.status(404).json({
         success: false,
         error: {
@@ -131,13 +141,16 @@ const getUserStats = async (req, res) => {
     }
 
     // Get user's papers
+    logger.info(`Fetching papers for user ID: ${targetUserId}`);
     const userPapers = await Paper.find({ uploadedBy: targetUserId });
     const totalUploads = userPapers.length;
 
     // Calculate total downloads
     const totalDownloads = userPapers.reduce((sum, paper) => sum + (paper.downloadCount || 0), 0);
+    logger.info(`User ${targetUserId} has ${totalUploads} uploads and ${totalDownloads} total downloads.`);
 
     // Get favorite keywords
+    logger.info(`Aggregating favorite keywords for user ID: ${targetUserId}`);
     const favoriteKeywords = await Paper.aggregate([
       { $match: { uploadedBy: targetUserId } },
       { $unwind: '$keywords' },
@@ -159,6 +172,7 @@ const getUserStats = async (req, res) => {
     ]);
 
     // Get upload trend (last 12 months)
+    logger.info(`Aggregating upload trend for user ID: ${targetUserId}`);
     const twelveMonthsAgo = new Date();
     twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
     
@@ -190,11 +204,13 @@ const getUserStats = async (req, res) => {
     ]);
 
     // Get recent uploads
+    logger.info(`Fetching recent uploads for user ID: ${targetUserId}`);
     const recentUploads = await Paper.find({ uploadedBy: targetUserId })
       .sort({ uploadedAt: -1 })
       .limit(5)
       .select('title uploadedAt downloadCount');
 
+    logger.info(`Successfully retrieved user stats for ID: ${targetUserId}`);
     res.json({
       success: true,
       data: {
@@ -227,18 +243,23 @@ const getUserStats = async (req, res) => {
 
 // Get system health
 const getSystemHealth = async (req, res) => {
+  logger.info('Get system health request received.');
   try {
     const microserviceClient = require('../services/microserviceClient');
     
     // Check database connection
     const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    logger.info(`Database connection status: ${dbStatus}`);
     
     // Check microservice health
+    logger.info('Checking microservice health.');
     const microserviceHealth = await microserviceClient.checkHealth();
+    logger.info(`Microservice health: ${microserviceHealth ? 'healthy' : 'unhealthy'}`);
     
     // Get basic stats
     const totalPapers = await Paper.countDocuments();
     const totalUsers = await User.countDocuments();
+    logger.info(`System stats: ${totalPapers} papers, ${totalUsers} users.`);
     
     // Check disk space (basic check)
     const fs = require('fs');
@@ -250,6 +271,7 @@ const getSystemHealth = async (req, res) => {
     } catch (error) {
       diskSpace = 'unavailable';
     }
+    logger.info(`File system status at ${uploadDir}: ${diskSpace}`);
 
     res.json({
       success: true,
@@ -282,6 +304,7 @@ const getSystemHealth = async (req, res) => {
 
 // Get research insights
 const getResearchInsights = async (req, res) => {
+  logger.info('Get research insights request received', { query: req.query });
   try {
     const { timeframe = '6months' } = req.query;
     
@@ -295,8 +318,10 @@ const getResearchInsights = async (req, res) => {
     } else if (timeframe === '1year') {
       startDate.setFullYear(startDate.getFullYear() - 1);
     }
+    logger.info(`Calculating research insights for timeframe: ${timeframe} (since ${startDate.toISOString()})`);
 
     // Get trending research areas
+    logger.info('Aggregating trending research areas.');
     const trendingAreas = await Paper.aggregate([
       { $match: { uploadedAt: { $gte: startDate } } },
       { $unwind: '$keywords' },
@@ -318,6 +343,7 @@ const getResearchInsights = async (req, res) => {
     ]);
 
     // Get most active journals
+    logger.info('Aggregating most active journals.');
     const activeJournals = await Paper.aggregate([
       { $match: { uploadedAt: { $gte: startDate }, journalName: { $exists: true, $ne: '' } } },
       {
@@ -338,12 +364,14 @@ const getResearchInsights = async (req, res) => {
     ]);
 
     // Get most downloaded papers
+    logger.info('Fetching most popular (downloaded) papers.');
     const popularPapers = await Paper.find({ uploadedAt: { $gte: startDate } })
       .sort({ downloadCount: -1 })
       .limit(10)
       .select('title downloadCount uploadedAt uploadedBy')
       .populate('uploadedBy', 'firstName lastName');
 
+    logger.info(`Found ${trendingAreas.length} trending areas, ${activeJournals.length} active journals, and ${popularPapers.length} popular papers.`);
     res.json({
       success: true,
       data: {
@@ -354,7 +382,7 @@ const getResearchInsights = async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Research insights error:', error);
+    logger.error('Research insights error:', { error, query: req.query });
     res.status(500).json({
       success: false,
       error: {
