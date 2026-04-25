@@ -9,9 +9,9 @@
 
 ---
 
-## What is WAD?
+## What is Research Companion?
 
-**WAD** (Research Companion) is a sophisticated full-stack web application designed to revolutionize how researchers manage, analyze, and discover academic papers. Think of it as your personal research assistant that never sleeps — uploading papers gets you AI-powered metadata extraction, intelligent summaries, and deep research insights in seconds.
+Research Companion is a sophisticated full-stack web application designed to revolutionize how researchers manage, analyze, and discover academic papers. Think of it as your personal research assistant that never sleeps — uploading papers gets you AI-powered metadata extraction, intelligent summaries, and deep research insights in seconds.
 
 Built with a **microservices architecture**, WAD combines the best of Node.js, React, and Python to deliver a seamless, production-grade experience. Whether you're an individual researcher or part of a larger institution, WAD scales to meet your needs.
 
