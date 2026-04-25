@@ -1,4 +1,4 @@
-# WAD — Research Companion
+#  — Research Companion
 
 > **Your AI-Powered Research Paper Management Platform**
 
@@ -13,13 +13,13 @@
 
 Research Companion is a sophisticated full-stack web application designed to revolutionize how researchers manage, analyze, and discover academic papers. Think of it as your personal research assistant that never sleeps — uploading papers gets you AI-powered metadata extraction, intelligent summaries, and deep research insights in seconds.
 
-Built with a **microservices architecture**, WAD combines the best of Node.js, React, and Python to deliver a seamless, production-grade experience. Whether you're an individual researcher or part of a larger institution, WAD scales to meet your needs.
+Built with a **microservices architecture**,  combines the best of Node.js, React, and Python to deliver a seamless, production-grade experience. Whether you're an individual researcher or part of a larger institution,  scales to meet your needs.
 
 ---
 
-## Why WAD?
+## Why Research Companion?
 
-| Challenge | WAD's Solution |
+| Challenge | Research Companion's Solution |
 |-----------|----------------|
 | Manually extracting paper metadata is tedious | **AI-powered extraction** using Google Gemini — upload a PDF and get title, authors, abstract, keywords, and more in one click |
 | Finding relevant papers across your collection is hard | **Full-text search** with MongoDB text indexes, advanced filters, and real-time suggestions |
@@ -33,7 +33,7 @@ Built with a **microservices architecture**, WAD combines the best of Node.js, R
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                              WAD Architecture                               │
+│                               Architecture                               │
 └────────────────────────────────────────────────────────────────────────────┘
 
                                     ┌─────────────┐
@@ -174,11 +174,11 @@ Services:
 
 ### Quick Start with Docker
 
-The fastest way to get WAD running:
+The fastest way to get  running:
 
 ```bash
 # 1. Clone the repository
-cd WAD
+cd 
 
 # 2. Configure environment variables
 # Edit these files:
@@ -442,7 +442,7 @@ GET /analytics/user/:userId
 ## Project Structure
 
 ```
-WAD/
+/
 ├── docker-compose.yml           # Docker orchestration
 ├── DOCKER.md                    # Docker setup guide
 ├── README.md                    # This file
@@ -552,7 +552,7 @@ docker compose ps
 
 ## AI Capabilities (Gemini Integration)
 
-WAD leverages **Google Gemini API** for advanced AI-powered features:
+ leverages **Google Gemini API** for advanced AI-powered features:
 
 ### 1. PDF Metadata Extraction
 Upload any research paper PDF and get:
@@ -762,7 +762,7 @@ This project is licensed under the MIT License.
 
 <div align="center">
 
-**WAD — Research Companion**
+** — Research Companion**
 
 *Empowering researchers with AI*
 
