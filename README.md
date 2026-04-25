@@ -1,4 +1,4 @@
-#  — Research Companion
+#  Research Companion
 
 > **Your AI-Powered Research Paper Management Platform**
 
